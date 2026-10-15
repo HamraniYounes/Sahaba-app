@@ -1,14 +1,17 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Search, SlidersHorizontal, MapPin, ShieldCheck, ChevronDown, X } from 'lucide-react'
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { isSupabaseConfigured } from '../lib/supabase'
 import type { Location, LocationCategory } from '../types/database'
 import LocationCard from '../components/LocationCard'
 import { categoryLabel } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import Advertisements from '../components/Advertisements'
+import { listFavorites, setFavorite } from '../services/communityService'
 
 const categories: LocationCategory[] = ['restaurant','fast_food','cafe','boucherie','epicerie','mosquee','salle_priere','ecole_coran','funeraire','sante','services']
 const emptyFilters = { halal:false, alcohol:false, prayer:false, vegan:false }
+const LOCATION_LIST_SELECT = 'id,slug,name,category,city,country,cover_image,halal_full,average_rating,review_count'
+
 export default function Home() {
   const [locations,setLocations] = useState<Location[]>([])
   const [loading,setLoading] = useState(true)
@@ -23,29 +26,41 @@ export default function Home() {
 
   useEffect(() => {
     let active = true
-    async function load() {
-      if (!isSupabaseConfigured) { setLoading(false); setError('Configurez Supabase dans .env.local pour charger les lieux.'); return }
-      setLoading(true); setError('')
-      let request = supabase.from('locations').select('*').in('status',['published','claimed']).order('created_at',{ascending:false}).limit(1000)
-      if (category) request = request.eq('category',category)
-      if (filters.halal) request = request.eq('halal_full',true)
-      if (filters.alcohol) request = request.eq('alcohol_free',true)
-      if (filters.prayer) request = request.eq('prayer_room',true)
-      if (filters.vegan) request = request.eq('vegan_options',true)
-      if (city.trim()) request = request.ilike('city',`%${city.trim()}%`)
-      if (query.trim()) request = request.or(`name.ilike.%${query.trim()}%,description.ilike.%${query.trim()}%,address.ilike.%${query.trim()}%`)
-      const {data,error:queryError} = await request
-      if (!active) return
-      if (queryError) setError(queryError.message)
-      else setLocations((data || []) as Location[])
-      setLoading(false)
-    }
-    void load()
-    return ()=>{active=false}
+    const timer = window.setTimeout(() => {
+      async function load() {
+        if (!isSupabaseConfigured) { setLoading(false); setError('Configurez Supabase dans .env.local pour charger les lieux.'); return }
+        setLoading(true); setError('')
+        let request = undefined as ReturnType<typeof import('../lib/supabase')['supabase']['from']> | undefined
+        void request
+        const queryBuilder = (await import('../lib/supabase')).supabase
+          .from('locations')
+          .select(LOCATION_LIST_SELECT)
+          .in('status',['published','claimed'])
+          .order('created_at',{ascending:false})
+          .limit(100)
+        if (category) queryBuilder.eq('category',category)
+        if (filters.halal) queryBuilder.eq('halal_full',true)
+        if (filters.alcohol) queryBuilder.eq('alcohol_free',true)
+        if (filters.prayer) queryBuilder.eq('prayer_room',true)
+        if (filters.vegan) queryBuilder.eq('vegan_options',true)
+        if (city.trim()) queryBuilder.ilike('city',`%${city.trim()}%`)
+        if (query.trim()) queryBuilder.or(`name.ilike.%${query.trim()}%,description.ilike.%${query.trim()}%,address.ilike.%${query.trim()}%`)
+        const {data,error:queryError} = await queryBuilder
+        if (!active) return
+        if (queryError) setError(queryError.message)
+        else setLocations((data || []) as Location[])
+        setLoading(false)
+      }
+      void load()
+    }, 300)
+    return ()=>{active=false;window.clearTimeout(timer)}
   },[query,city,category,filters])
 
-  useEffect(()=>{ if (!user || !isSupabaseConfigured) {setFavorites([]);return}
-    supabase.from('favorites').select('location_id').eq('user_id',user.id).then(({data})=>setFavorites((data||[]).map(x=>x.location_id)))
+  useEffect(()=>{
+    let active = true
+    if (!user || !isSupabaseConfigured) {setFavorites([]);return ()=>{active=false}}
+    void listFavorites(user.id).then(({data})=>{if(active)setFavorites((data||[]).map(item=>item.location_id))})
+    return ()=>{active=false}
   },[user])
 
   const displayed = useMemo(()=>locations,[locations])
@@ -53,9 +68,7 @@ export default function Home() {
     if (!user) { window.location.href='/login'; return }
     const exists=favorites.includes(id)
     setFavorites(prev=>exists?prev.filter(x=>x!==id):[...prev,id])
-    const result=exists
-      ? await supabase.from('favorites').delete().eq('location_id',id).eq('user_id',user.id)
-      : await supabase.from('favorites').insert({location_id:id,user_id:user.id})
+    const result=await setFavorite(user.id,id,!exists)
     if (result.error) setFavorites(prev=>exists?[...prev,id]:prev.filter(x=>x!==id))
   }
   return <div>
