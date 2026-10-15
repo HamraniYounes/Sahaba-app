@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { MapPin, Info, Upload, Clock3 } from 'lucide-react'
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { isSupabaseConfigured } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { slugify } from '../lib/utils'
-import { geocodeAddress } from '../lib/geocoding'
 import type { LocationCategory } from '../types/database'
+import { createLocation } from '../services/locationService'
 
 const categoryOptions: LocationCategory[] = ['restaurant','fast_food','cafe','boulangerie','boucherie','epicerie','mosquee','salle_priere','ecole_coran','association','funeraire','sante','bien_etre','vetements','librairie','finance','voyage','hebergement','services','autre']
 const labels: Record<string,string> = {restaurant:'Restaurant',fast_food:'Restauration rapide',cafe:'Café',boulangerie:'Boulangerie',boucherie:'Boucherie',epicerie:'Épicerie',mosquee:'Mosquée',salle_priere:'Salle de prière',ecole_coran:'École coranique',association:'Association',funeraire:'Services funéraires',sante:'Santé',bien_etre:'Bien-être',vetements:'Vêtements',librairie:'Librairie',finance:'Finance',voyage:'Voyage',hebergement:'Hébergement',services:'Services',autre:'Autre'}
@@ -19,32 +18,18 @@ export default function SubmitLocation() {
   const [photos,setPhotos] = useState<File[]>([])
   const [busy,setBusy] = useState(false); const [error,setError] = useState(''); const [success,setSuccess] = useState('')
   function update<K extends keyof typeof form>(key:K,value:typeof form[K]) { setForm(prev=>({...prev,[key]:value})) }
-  async function geocode() {
-    const query = [form.address,form.city,form.country].filter(Boolean).join(', ')
-    return geocodeAddress(query)
-  }
   async function submit(e:React.FormEvent) {
     e.preventDefault(); setError(''); setSuccess('')
     if (!user) { navigate('/login'); return }
     if (!isSupabaseConfigured) { setError('Supabase n’est pas configuré.'); return }
     setBusy(true)
     try {
-      const coordinates = await geocode()
-      if (!coordinates) { setError('Adresse introuvable. Vérifiez l’adresse, la ville et le pays.'); setBusy(false); return }
-      const slug = `${slugify(form.name)||'lieu'}-${Math.random().toString(36).slice(2,7)}`
-      const uploaded: string[] = []
-      for (const file of photos) {
-        const safeName = file.name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g,'-')
-        const path = `${user.id}/${crypto.randomUUID()}-${safeName}`
-        const {error:uploadError} = await supabase.storage.from('location-photos').upload(path,file,{upsert:false,contentType:file.type})
-        if (uploadError) throw new Error(`Photo non envoyée : ${uploadError.message}`)
-        const {data} = supabase.storage.from('location-photos').getPublicUrl(path)
-        uploaded.push(data.publicUrl)
-      }
-      const opening_hours = Object.fromEntries(Object.entries(hours).map(([day,value])=>[day,value.trim()||'Fermé']))
-      const payload = {...form,slug,owner_id:null,created_by:user.id,status:'pending',latitude:coordinates.latitude,longitude:coordinates.longitude,photos:uploaded,cover_image:uploaded[0]||null,price_range:null,opening_hours}
-      const {error:insertError} = await supabase.from('locations').insert(payload)
-      if (insertError) throw new Error(insertError.message)
+      await createLocation({
+        name: form.name, category: form.category, address: form.address, city: form.city, country: form.country,
+        phone: form.phone, email: form.email, website: form.website, description: form.description,
+        features: { halal_full: form.halal_full, alcohol_free: form.alcohol_free, women_only: form.women_only, prayer_room: form.prayer_room, wudu_facilities: form.wudu_facilities, burkini_friendly: form.burkini_friendly, vegetarian_options: form.vegetarian_options, vegan_options: form.vegan_options, accessible: form.accessible, parking: form.parking },
+        hours, photos, userId: user.id,
+      })
       setSuccess('Votre proposition a été envoyée et attend une validation par la modération.')
       setTimeout(()=>navigate('/profile'),1500)
     } catch (err) { setError(err instanceof Error ? err.message : 'Une erreur inattendue est survenue.') }
