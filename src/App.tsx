@@ -10,6 +10,7 @@ import EditLocation from './pages/EditLocation'
 import Favorites from './pages/Favorites'
 import Profile from './pages/Profile'
 import Admin from './pages/Admin'
+import ModerationSessions from './pages/ModerationSessions'
 import { About, Contact, Legal } from './pages/StaticPages'
 
 export default function App(){
@@ -27,6 +28,7 @@ export default function App(){
     <Route path="/favorites" element={<RequireAuth><Favorites/></RequireAuth>}/>
     <Route path="/profile" element={<RequireAuth><Profile/></RequireAuth>}/>
     <Route path="/admin" element={<RequireAdmin><Admin/></RequireAdmin>}/>
+    <Route path="/admin/sessions" element={<RequireAdmin><ModerationSessions/></RequireAdmin>}/>
     <Route path="*" element={<Navigate to="/" replace/>}/>
   </Route></Routes>
 }
