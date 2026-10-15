@@ -32,7 +32,8 @@ export function validateLocationForm(form: LocationForm): ValidationResult {
   if (form.phone.trim().length > 40) return { ok: false, message: 'Le téléphone doit faire 40 caractères maximum.' }
   if (form.email.trim() && (!EMAIL_RE.test(form.email.trim()) || form.email.trim().length > 254)) return { ok: false, message: 'L’adresse e-mail est invalide.' }
   if (form.website.trim()) {
-    try { const url = new URL(form.website.trim()); if (!['http:', 'https:'].includes(url.protocol)) throw new Error() } catch { return { ok: false, message: 'Le site web doit être une URL HTTP(S) valide.' }
+    try { const url = new URL(form.website.trim()); if (!['http:', 'https:'].includes(url.protocol)) throw new Error() }
+    catch { return { ok: false, message: 'Le site web doit être une URL HTTP(S) valide.' }
   }
   if (form.description.trim().length > 4000) return { ok: false, message: 'La description doit faire 4000 caractères maximum.' }
   return { ok: true }
