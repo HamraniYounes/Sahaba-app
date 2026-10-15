@@ -4,7 +4,7 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(20);
+select plan(22);
 
 -- RPC execution privileges.
 select ok(
@@ -60,6 +60,16 @@ select ok(
 select ok(
   strpos(lower(pg_get_functiondef('public.approve_location_claim(uuid)'::regprocedure)), 'location is no longer available for claim approval') > 0,
   'claim approval rejects stale location state'
+);
+select ok(
+  strpos(lower(pg_get_functiondef('public.approve_location_claim(uuid)'::regprocedure)), "role = 'owner'::public.app_role") > 0,
+  'approved claim promotes a normal claimant to owner'
+);
+
+-- Owner is a first-class application role and may submit claims.
+select ok(
+  exists (select 1 from pg_enum e join pg_type t on t.oid=e.enumtypid where t.typname='app_role' and e.enumlabel='owner'),
+  'owner role exists in the app_role enum'
 );
 
 -- Required integrity constraints remain present.
