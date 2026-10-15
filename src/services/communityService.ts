@@ -29,8 +29,12 @@ export async function getFavoriteState(locationId: string, userId: string) {
   return supabase.from('favorites').select('id').eq('location_id', locationId).eq('user_id', userId).maybeSingle()
 }
 
-export async function listFavorites(userId: string) {
+export async function listFavoriteIds(userId: string) {
   return supabase.from('favorites').select('location_id').eq('user_id', userId)
+}
+
+export async function listFavorites(userId: string) {
+  return supabase.from('favorites').select('location:locations(*)').eq('user_id', userId)
 }
 
 export async function removeFavorite(userId: string, locationId: string) {
