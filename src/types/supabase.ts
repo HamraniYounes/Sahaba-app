@@ -48,7 +48,7 @@ export type Database = {
       }
       reports: {
         Row: { id: string; location_id: string; reporter_id: string | null; reason: string; details: string | null; status: Database['public']['Enums']['report_status']; resolved_by: string | null; resolved_at: string | null; created_at: string }
-        Insert: { id?: string; location_id: string; reporter_id?: string | null; reason: string; details?: string | null; status?: Database['public']['Enums']['report_status']; resolved_by?: string | null; resolved_at?: string }
+        Insert: { id?: string; location_id: string; reporter_id?: string | null; reason: string; details?: string | null; status?: Database['public']['Enums']['report_status']; resolved_by?: string | null; resolved_at?: string | null; created_at?: string }
         Update: Partial<Database['public']['Tables']['reports']['Insert']>
         Relationships: [{ foreignKeyName: 'reports_location_id_fkey'; columns: ['location_id']; isOneToOne: false; referencedRelation: 'locations'; referencedColumns: ['id'] }]
       }
