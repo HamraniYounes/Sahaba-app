@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MapPin, Star, Heart, PlusCircle, ShieldCheck } from 'lucide-react'
-import { isSupabaseConfigured, supabase } from '../lib/supabase'
+import { isSupabaseConfigured } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Location } from '../types/database'
 import { formatDate } from '../lib/utils'
