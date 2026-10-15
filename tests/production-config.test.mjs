@@ -20,9 +20,10 @@ test('les rôles de modération ont un lien direct vers la modification des fich
 
 test('la soumission ne demande pas les coordonnées manuellement', async () => {
   const submit = await read('../src/pages/SubmitLocation.tsx')
+  const service = await read('../src/services/locationService.ts')
   assert.doesNotMatch(submit, /name=["']latitude["']|name=["']longitude["']/i)
-  assert.match(submit, /geocodeAddress/)
-  assert.match(submit, /owner_id:null/)
+  assert.match(service, /geocodeAddress/)
+  assert.match(service, /owner_id: null/)
 })
 
 test('les appels Nominatim partagent un cache et une temporisation locale', async () => {
