@@ -1,7 +1,7 @@
 -- Database security and performance regression tests.
 begin;
 create extension if not exists pgtap;
-select plan(46);
+select plan(54);
 select ok(has_function_privilege('anon', 'public.increment_location_view(uuid)', 'execute'), 'anonymous users can execute the atomic view RPC');
 select ok(not has_function_privilege('public', 'public.increment_location_view(uuid)', 'execute'), 'public role cannot execute the view RPC');
 select ok(has_function_privilege('authenticated', 'public.approve_location_claim(uuid)', 'execute'), 'authenticated users can execute claim approval RPC');
@@ -48,5 +48,14 @@ select ok(to_regprocedure('public.delete_my_account()') is not null, 'self-servi
 select ok(not has_function_privilege('anon', 'public.delete_my_account()', 'execute'), 'anonymous users cannot delete accounts');
 select ok(has_function_privilege('authenticated', 'public.delete_my_account()', 'execute'), 'authenticated users can delete their own account');
 select ok(strpos(lower(pg_get_functiondef('public.delete_my_account()'::regprocedure)), 'created_by') > 0, 'account deletion protects submitted locations');
+select ok(to_regclass('public.rate_limit_events') is not null, 'rate limit event table exists');
+select ok((select relrowsecurity from pg_class where oid = 'public.rate_limit_events'::regclass), 'rate limit events have RLS enabled');
+select ok(to_regclass('public.rate_limit_events_actor_action_created_idx') is not null, 'rate limit events are indexed by actor, action and time');
+select ok(not has_function_privilege('authenticated', 'public.enforce_user_rate_limit()', 'execute'), 'rate limit trigger function is not callable by authenticated users');
+select ok(strpos(lower(pg_get_functiondef('public.enforce_user_rate_limit()'::regprocedure)), 'pg_advisory_xact_lock') > 0, 'rate limiting serializes concurrent requests per actor and action');
+select ok(exists (select 1 from pg_trigger where tgname='enforce_location_create_rate_limit' and tgrelid='public.locations'::regclass), 'location creation is rate limited at the database boundary');
+select ok(exists (select 1 from pg_trigger where tgname='enforce_review_create_rate_limit' and tgrelid='public.reviews'::regclass), 'review creation is rate limited at the database boundary');
+select ok(exists (select 1 from pg_trigger where tgname='enforce_claim_create_rate_limit' and tgrelid='public.claims'::regclass), 'claim creation is rate limited at the database boundary');
+select ok(exists (select 1 from pg_trigger where tgname='enforce_ownership_transfer_create_rate_limit' and tgrelid='public.ownership_transfers'::regclass), 'ownership transfer requests are rate limited at the database boundary');
 select * from finish();
 rollback;
