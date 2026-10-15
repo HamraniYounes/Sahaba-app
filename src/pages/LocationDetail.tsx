@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { MapPin, Star, Phone, Globe, Mail, Heart, Share2, Flag, Clock, CheckCircle2 } from 'lucide-react'
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { isSupabaseConfigured } from '../lib/supabase'
 import type { Location } from '../types/database'
 import { categoryLabel } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import Advertisements from '../components/Advertisements'
+import { getFavoriteState, getLocationBySlug, getLocationReviews, incrementLocationViews, setFavorite, submitClaim, submitReport, upsertOwnerReply, upsertReview, type Review } from '../services/communityService'
 
-interface Review { id:string; rating:number; comment:string|null; created_at:string; user_id:string; owner_replies?:{id:string;body:string;owner_id:string;created_at:string}[] }
 export default function LocationDetail() {
   const {slug}=useParams()
   const {user}=useAuth()
@@ -18,44 +18,52 @@ export default function LocationDetail() {
   const [rating,setRating]=useState(5)
   const [comment,setComment]=useState('')
   const [notice,setNotice]=useState('')
-  const [favorite,setFavorite]=useState(false)
+  const [favorite,setFavoriteState]=useState(false)
   const [reportOpen,setReportOpen]=useState(false)
   const [reportReason,setReportReason]=useState('incorrect')
   const [claimOpen,setClaimOpen]=useState(false)
   const [claimMessage,setClaimMessage]=useState('')
   const [replyDrafts,setReplyDrafts]=useState<Record<string,string>>({})
+
   useEffect(()=>{let active=true;async function load(){
     if(!isSupabaseConfigured||!slug){setLoading(false);return}
-    const {data,error}=await supabase.from('locations').select('*').eq('slug',slug).maybeSingle()
+    const {data,error}=await getLocationBySlug(slug)
     if(!active)return
     if(error||!data){setError('Ce lieu est introuvable ou n’est pas accessible.');setLoading(false);return}
-    setPlace(data as Location)
+    setPlace(data)
     document.title = `${data.name} — Sahaba`
     const description = [data.name, data.address, data.city, data.country, data.description].filter(Boolean).join(' · ').slice(0, 300)
     let descriptionTag = document.querySelector<HTMLMetaElement>('meta[name="description"]')
     if (!descriptionTag) { descriptionTag = document.createElement('meta'); descriptionTag.name = 'description'; document.head.appendChild(descriptionTag) }
     descriptionTag.content = description
-    void supabase.from('locations').update({view_count:(data.view_count||0)+1}).eq('id',data.id)
-    const {data:rv}=await supabase.from('reviews').select('id,rating,comment,created_at,user_id,owner_replies(id,body,owner_id,created_at)').eq('location_id',data.id).order('created_at',{ascending:false}).limit(50)
+    void incrementLocationViews(data.id, data.view_count || 0)
+    const {data:rv}=await getLocationReviews(data.id)
     if(active)setReviews((rv||[]) as Review[])
-    if(user){const {data:f}=await supabase.from('favorites').select('id').eq('location_id',data.id).eq('user_id',user.id).maybeSingle();if(active)setFavorite(Boolean(f))}
+    if(user){const {data:f}=await getFavoriteState(data.id,user.id);if(active)setFavoriteState(Boolean(f))}
     setLoading(false)
   }void load();return()=>{active=false}},[slug,user])
+
+  async function reloadReviews(locationId:string){const {data,error}=await getLocationReviews(locationId);if(error){setNotice(error.message);return}setReviews((data||[]) as Review[])}
+
   async function submitReview(e:React.FormEvent){e.preventDefault();if(!user){setNotice('Connectez-vous pour publier un avis.');return}if(!place)return
-    const {error}=await supabase.from('reviews').upsert({location_id:place.id,user_id:user.id,rating,comment:comment.trim()||null},{onConflict:'location_id,user_id'})
-    if(error){setNotice(error.message);return}setNotice('Votre avis a été enregistré.');setComment('')
-    const {data}=await supabase.from('reviews').select('id,rating,comment,created_at,user_id,owner_replies(id,body,owner_id,created_at)').eq('location_id',place.id).order('created_at',{ascending:false}).limit(50);setReviews((data||[]) as Review[])
+    const {error}=await upsertReview(place.id,user.id,rating,comment.trim()||null)
+    if(error){setNotice(error.message);return}setNotice('Votre avis a été enregistré.');setComment('');await reloadReviews(place.id)
   }
+
   async function toggleFavorite(){if(!user){setNotice('Connectez-vous pour gérer vos favoris.');return}if(!place)return
-    const result=favorite?await supabase.from('favorites').delete().eq('location_id',place.id).eq('user_id',user.id):await supabase.from('favorites').insert({location_id:place.id,user_id:user.id})
-    if(result.error)setNotice(result.error.message);else setFavorite(!favorite)
+    const result=await setFavorite(user.id,place.id,!favorite)
+    if(result.error)setNotice(result.error.message);else setFavoriteState(!favorite)
   }
+
   async function submitReport(e:React.FormEvent){e.preventDefault();if(!place)return
-    const {error}=await supabase.from('reports').insert({location_id:place.id,reporter_id:user?.id||null,reason:reportReason,details:null})
+    const {error}=await submitReport(place.id,user?.id||null,reportReason)
     setNotice(error?error.message:'Signalement envoyé pour examen.');setReportOpen(false)
   }
-  async function submitClaim(e:React.FormEvent){e.preventDefault();if(!user||!place){setNotice('Connectez-vous pour réclamer cette fiche.');return}const {error}=await supabase.from('claims').insert({location_id:place.id,claimant_id:user.id,message:claimMessage.trim()||null});setNotice(error?error.message:'Votre demande de réclamation a été envoyée à la modération.');if(!error){setClaimOpen(false);setClaimMessage('')}}
-  async function submitOwnerReply(e:React.FormEvent,reviewId:string){e.preventDefault();if(!user||!place)return;const body=(replyDrafts[reviewId]||'').trim();if(!body)return;const {error}=await supabase.from('owner_replies').upsert({review_id:reviewId,owner_id:user.id,body},{onConflict:'review_id'});if(error){setNotice(error.message);return}setReplyDrafts(p=>({...p,[reviewId]:''}));setNotice('Réponse du propriétaire enregistrée.');const {data}=await supabase.from('reviews').select('id,rating,comment,created_at,user_id,owner_replies(id,body,owner_id,created_at)').eq('location_id',place.id).order('created_at',{ascending:false}).limit(50);setReviews((data||[]) as Review[])}
+
+  async function submitClaim(e:React.FormEvent){e.preventDefault();if(!user||!place){setNotice('Connectez-vous pour réclamer cette fiche.');return}const {error}=await submitClaim(place.id,user.id,claimMessage.trim()||null);setNotice(error?'Votre demande n’a pas pu être envoyée.': 'Votre demande de réclamation a été envoyée à la modération.');if(!error){setClaimOpen(false);setClaimMessage('')}}
+
+  async function submitOwnerReply(e:React.FormEvent,reviewId:string){e.preventDefault();if(!user||!place)return;const body=(replyDrafts[reviewId]||'').trim();if(!body)return;const {error}=await upsertOwnerReply(reviewId,user.id,body);if(error){setNotice(error.message);return}setReplyDrafts(p=>({...p,[reviewId]:''}));setNotice('Réponse du propriétaire enregistrée.');await reloadReviews(place.id)}
+
   if(loading)return <div className="page-wrap"><div className="loading-block">Chargement du lieu…</div></div>
   if(!place)return <div className="page-wrap"><div className="empty-state"><h2>Lieu indisponible</h2><p>{error||'Ce lieu n’existe pas.'}</p><Link to="/" className="button-primary mt-4">Retour à l’exploration</Link></div></div>
   const features=[['halal_full','Halal'],['alcohol_free','Sans alcool'],['prayer_room','Salle de prière'],['wudu_facilities','Installations wudu'],['women_only','Réservé aux femmes'],['burkini_friendly','Burkini accepté'],['vegetarian_options','Options végétariennes'],['vegan_options','Options véganes'],['accessible','Accessible'],['parking','Parking']] as const
