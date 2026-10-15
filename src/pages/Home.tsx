@@ -6,7 +6,7 @@ import LocationCard from '../components/LocationCard'
 import { categoryLabel } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import Advertisements from '../components/Advertisements'
-import { listFavorites, setFavorite } from '../services/communityService'
+import { listFavoriteIds, setFavorite } from '../services/communityService'
 
 const categories: LocationCategory[] = ['restaurant','fast_food','cafe','boucherie','epicerie','mosquee','salle_priere','ecole_coran','funeraire','sante','services']
 const emptyFilters = { halal:false, alcohol:false, prayer:false, vegan:false }
@@ -52,7 +52,7 @@ export default function Home() {
   useEffect(()=>{
     let active = true
     if (!user || !isSupabaseConfigured) {setFavorites([]);return ()=>{active=false}}
-    void listFavorites(user.id).then(({data})=>{if(active)setFavorites((data||[]).map(item=>item.location_id))})
+    void listFavoriteIds(user.id).then(({data})=>{if(active)setFavorites((data||[]).map(item=>item.location_id))})
     return ()=>{active=false}
   },[user])
 
