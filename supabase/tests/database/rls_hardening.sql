@@ -4,7 +4,7 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(22);
+select plan(27);
 
 -- RPC execution privileges.
 select ok(
@@ -70,6 +70,25 @@ select ok(
 select ok(
   exists (select 1 from pg_enum e join pg_type t on t.oid=e.enumtypid where t.typname='app_role' and e.enumlabel='owner'),
   'owner role exists in the app_role enum'
+);
+
+-- Opening hours and closure records are part of the public data contract.
+select col_not_null('public', 'locations', 'timezone', 'locations have a timezone for live opening status');
+select col_is_fk('public', 'location_closures', 'location_id', 'closures belong to a location');
+select ok(
+  to_regclass('public.location_closures_location_dates_idx') is not null,
+  'closure date index exists'
+);
+select ok(
+  to_regprocedure('public.protect_location_closure_identity()') is not null,
+  'closure identity protection function exists'
+);
+select ok(
+  pg_get_constraintdef(oid) like '%closure_type = ''definitive''%'
+  from pg_constraint
+  where conrelid = 'public.location_closures'::regclass
+    and conname = 'location_closures_dates_check',
+  'definitive closures cannot have an end date'
 );
 
 -- Required integrity constraints remain present.
