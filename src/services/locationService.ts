@@ -4,8 +4,10 @@ import { slugify } from '../lib/utils'
 import { validateLocationForm, validateOpeningHours, validatePhotos, type LocationForm } from '../lib/validation'
 import type { Location } from '../types/database'
 
+export type LocationFeatures = Pick<Location, 'halal_full' | 'alcohol_free' | 'women_only' | 'prayer_room' | 'wudu_facilities' | 'burkini_friendly' | 'vegetarian_options' | 'vegan_options' | 'accessible' | 'parking'>
+
 export type SubmitLocationInput = LocationForm & {
-  features: Pick<Location, 'halal_full' | 'alcohol_free' | 'women_only' | 'prayer_room' | 'wudu_facilities' | 'burkini_friendly' | 'vegetarian_options' | 'vegan_options' | 'accessible' | 'parking'>
+  features: LocationFeatures
   hours: Record<string, string>
   photos: File[]
   userId: string
@@ -52,7 +54,14 @@ export async function createLocation(input: SubmitLocationInput) {
   if (error) throw new Error(error.message)
 }
 
-export async function updateLocation(locationId: string, input: LocationForm & { hours: Record<string, string>; photos: File[]; existingPhotos: string[]; userId: string }) {
+type UpdateLocationInput = LocationForm & {
+  hours: Record<string, string>
+  photos: File[]
+  existingPhotos: string[]
+  userId: string
+}
+
+export async function updateLocation(locationId: string, input: UpdateLocationInput) {
   const formValidation = validateLocationForm(input)
   if (!formValidation.ok) throw new Error(formValidation.message)
   const hoursValidation = validateOpeningHours(input.hours)
@@ -67,8 +76,9 @@ export async function updateLocation(locationId: string, input: LocationForm & {
   const photos = [...input.existingPhotos, ...uploaded]
   const opening_hours = Object.fromEntries(Object.entries(input.hours).map(([day, value]) => [day, value.trim() || 'Fermé']))
   const { error } = await supabase.from('locations').update({
-    ...input, address: input.address.trim() || null, city: input.city.trim(), country: input.country.trim(),
-    phone: input.phone.trim() || null, email: input.email.trim() || null, website: input.website.trim() || null,
+    name: input.name.trim(), category: input.category, address: input.address.trim() || null,
+    city: input.city.trim(), country: input.country.trim(), phone: input.phone.trim() || null,
+    email: input.email.trim() || null, website: input.website.trim() || null,
     description: input.description.trim() || null, latitude: coordinates.latitude, longitude: coordinates.longitude,
     photos, cover_image: photos[0] || null, opening_hours,
   }).eq('id', locationId)
