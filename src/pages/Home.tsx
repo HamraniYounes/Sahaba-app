@@ -1,9 +1,9 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Search, SlidersHorizontal, MapPin, ShieldCheck, ChevronDown, X } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import type { Location, LocationCategory } from '../types/database'
 import LocationCard from '../components/LocationCard'
-import { categoryLabel } from '../lib/utils'
+import { categoryLabel, escapePostgrestSearchTerm } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import Advertisements from '../components/Advertisements'
 import { listFavoriteIds, setFavorite } from '../services/communityService'
@@ -36,8 +36,13 @@ export default function Home() {
         if (filters.alcohol) request = request.eq('alcohol_free',true)
         if (filters.prayer) request = request.eq('prayer_room',true)
         if (filters.vegan) request = request.eq('vegan_options',true)
-        if (city.trim()) request = request.ilike('city',`%${city.trim()}%`)
-        if (query.trim()) request = request.or(`name.ilike.%${query.trim()}%,description.ilike.%${query.trim()}%,address.ilike.%${query.trim()}%`)
+        const cityTerm = city.trim()
+        const queryTerm = query.trim()
+        if (cityTerm) request = request.ilike('city',`%${escapePostgrestSearchTerm(cityTerm)}%`)
+        if (queryTerm) {
+          const term = escapePostgrestSearchTerm(queryTerm)
+          request = request.or(`name.ilike.%${term}%,description.ilike.%${term}%,address.ilike.%${term}%`)
+        }
         const {data,error:queryError} = await request
         if (!active) return
         if (queryError) setError(queryError.message)
@@ -56,7 +61,6 @@ export default function Home() {
     return ()=>{active=false}
   },[user])
 
-  const displayed = useMemo(()=>locations,[locations])
   async function toggleFavorite(id:string) {
     if (!user) { window.location.href='/login'; return }
     const exists=favorites.includes(id)
@@ -73,9 +77,9 @@ export default function Home() {
           <p className="mt-5 max-w-xl text-base leading-7 text-emerald-50/80 sm:text-lg">Mosquées, restaurants halal, commerces et services de confiance. Découvrez les adresses utiles près de vous.</p>
         </div>
         <div className="search-panel mt-9 max-w-5xl">
-          <label className="search-field"><Search size={20}/><span className="sr-only">Rechercher</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Un lieu, un service, un nom…"/></label>
+          <label className="search-field"><Search size={20}/><span className="sr-only">Rechercher</span><input value={query} maxLength={120} onChange={e=>setQuery(e.target.value)} placeholder="Un lieu, un service, un nom…"/></label>
           <span className="search-divider"/>
-          <label className="search-field"><MapPin size={19}/><span className="sr-only">Ville</span><input value={city} onChange={e=>setCity(e.target.value)} placeholder="Ville ou région"/></label>
+          <label className="search-field"><MapPin size={19}/><span className="sr-only">Ville</span><input value={city} maxLength={120} onChange={e=>setCity(e.target.value)} placeholder="Ville ou région"/></label>
           <button className="button-primary search-submit" onClick={()=>document.getElementById('results')?.scrollIntoView({behavior:'smooth'})}>Rechercher <Search size={17}/></button>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-white/75"><span className="mr-1">Recherches fréquentes :</span>{['Restaurant halal','Mosquée','Salle de prière','Boucherie'].map((label,i)=><button key={label} className="hero-chip" onClick={()=>{setCategory(['restaurant','mosquee','salle_priere','boucherie'][i]);document.getElementById('results')?.scrollIntoView({behavior:'smooth'})}}>{label}</button>)}</div>
@@ -88,11 +92,11 @@ export default function Home() {
         <div className="flex flex-wrap gap-x-5 gap-y-3 sm:col-span-2">{([{key:'halal',label:'Halal'},{key:'alcohol',label:'Sans alcool'},{key:'prayer',label:'Salle de prière'},{key:'vegan',label:'Options véganes'}] as const).map(item=><label key={item.key} className="inline-flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" className="check-input" checked={filters[item.key]} onChange={e=>setFilters(prev=>({...prev,[item.key]:e.target.checked}))}/>{item.label}</label>)}</div>
         <button className="inline-flex items-center gap-2 text-sm font-semibold text-sahaba-700" onClick={()=>{setCategory('');setCity('');setQuery('');setFilters(emptyFilters)}}><X size={15}/> Effacer les filtres</button>
       </div>}
-      <div className="mt-7 flex items-center justify-between"><p className="text-sm text-slate-500">{loading?'Chargement…':`${displayed.length} lieu${displayed.length!==1?'x':''} trouvé${displayed.length!==1?'s':''}`}</p><span className="inline-flex items-center gap-1.5 text-xs text-slate-400"><ShieldCheck size={14}/> Lieux soumis à modération</span></div>
+      <div className="mt-7 flex items-center justify-between"><p className="text-sm text-slate-500">{loading?'Chargement…':`${locations.length} lieu${locations.length!==1?'x':''} trouvé${locations.length!==1?'s':''}`}</p><span className="inline-flex items-center gap-1.5 text-xs text-slate-400"><ShieldCheck size={14}/> Lieux soumis à modération</span></div>
       {!isSupabaseConfigured && <div className="notice-warning mt-5"><strong>Configuration requise.</strong> {error} Copiez `.env.example` vers `.env.local`, puis ajoutez les identifiants de votre projet Supabase.</div>}
       {error && isSupabaseConfigured && <div className="notice-warning mt-5">{error}</div>}
       {loading ? <div className="location-grid mt-6">{[1,2,3,4,5,6].map(n=><div key={n} className="skeleton-card animate-pulse"><div className="aspect-[1.55/1] bg-slate-100"/><div className="space-y-3 p-4"><div className="h-4 w-2/3 rounded bg-slate-100"/><div className="h-3 w-1/2 rounded bg-slate-100"/></div></div>)}</div>
-      : displayed.length ? <div className="location-grid mt-6">{displayed.map((location,index)=><Fragment key={location.id}><LocationCard location={location} favorite={favorites.includes(location.id)} onFavorite={toggleFavorite}/>{displayed.length > 0 && index === Math.min(2, displayed.length - 1) && <Advertisements placement="home" variant="card"/>}</Fragment>)}</div>
+      : locations.length ? <div className="location-grid mt-6">{locations.map((location,index)=><Fragment key={location.id}><LocationCard location={location} favorite={favorites.includes(location.id)} onFavorite={toggleFavorite}/>{locations.length > 0 && index === Math.min(2, locations.length - 1) && <Advertisements placement="home" variant="card"/>}</Fragment>)}</div>
       : <div className="empty-state mt-8"><span className="empty-icon"><MapPin size={26}/></span><h3>Aucun lieu pour le moment</h3><p>Essayez de modifier vos filtres ou proposez le premier lieu de votre secteur.</p><a href="/submit" className="button-primary mt-4">Proposer un lieu</a></div>}
     </section>
     <section className="container-shell"><div className="contribute-banner"><div><p className="eyebrow-light">Construisons ensemble</p><h2 className="mt-2 font-display text-2xl font-semibold sm:text-3xl">Votre adresse peut aider quelqu'un.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">Ajoutez un lieu utile et contribuez à rendre l'annuaire plus complet pour toute la communauté.</p></div><a href="/submit" className="button-primary shrink-0">Ajouter un lieu <MapPin size={17}/></a></div></section>
