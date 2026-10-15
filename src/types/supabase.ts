@@ -54,7 +54,7 @@ export type Database = {
       }
       moderation_sessions: {
         Row: { id: string; title: string; scheduled_at: string; note: string | null; created_by: string; created_at: string }
-        Insert: { id?: string; title: string; scheduled_at: string; note?: string | null; created_by?: string; created_at?: string }
+        Insert: { id?: string; title: string; scheduled_at: string; note?: string | null; created_at?: string; created_by: string }
         Update: Partial<Database['public']['Tables']['moderation_sessions']['Insert']>
         Relationships: []
       }
