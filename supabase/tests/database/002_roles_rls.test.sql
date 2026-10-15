@@ -23,18 +23,42 @@ values ('RLS test location', 'rls-test-location', 'restaurant', 'Bruxelles', 'Be
 set local role authenticated;
 set local "request.jwt.claims" = '{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated"}';
 select is((select count(*)::int from public.locations where slug='rls-test-location'), 0, 'another regular user cannot read a pending location');
-select is((with changed as (update public.locations set name='Unauthorized edit' where slug='rls-test-location' returning id) select count(*)::int from changed), 0, 'another regular user cannot edit the location');
+with changed as (
+  update public.locations
+     set name='Unauthorized edit'
+   where slug='rls-test-location'
+  returning id
+)
+select is((select count(*)::int from changed), 0, 'another regular user cannot edit the location');
 
 set local "request.jwt.claims" = '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}';
 select is((select count(*)::int from public.locations where slug='rls-test-location'), 1, 'creator can read their pending location');
-select is((with changed as (update public.locations set description='Creator update' where slug='rls-test-location' returning id) select count(*)::int from changed), 1, 'creator can edit their location');
+with changed as (
+  update public.locations
+     set description='Creator update'
+   where slug='rls-test-location'
+  returning id
+)
+select is((select count(*)::int from changed), 1, 'creator can edit their location');
 
 set local "request.jwt.claims" = '{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated"}';
 select is((select count(*)::int from public.locations where slug='rls-test-location'), 1, 'moderator can read pending locations');
-select is((with changed as (update public.locations set description='Moderator correction' where slug='rls-test-location' returning id) select count(*)::int from changed), 1, 'moderator can edit location content');
+with changed as (
+  update public.locations
+     set description='Moderator correction'
+   where slug='rls-test-location'
+  returning id
+)
+select is((select count(*)::int from changed), 1, 'moderator can edit location content');
 
 set local "request.jwt.claims" = '{"sub":"10000000-0000-4000-8000-000000000004","role":"authenticated"}';
-select is((with changed as (update public.locations set description='Admin correction' where slug='rls-test-location' returning id) select count(*)::int from changed), 1, 'admin can edit location content');
+with changed as (
+  update public.locations
+     set description='Admin correction'
+   where slug='rls-test-location'
+  returning id
+)
+select is((select count(*)::int from changed), 1, 'admin can edit location content');
 
 set local "request.jwt.claims" = '{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated"}';
 select throws_ok(
