@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
-import { Compass, Heart, PlusCircle, UserRound, LogIn, LogOut, ShieldCheck, Menu } from 'lucide-react'
+import { Compass, Heart, PlusCircle, UserRound, LogIn, LogOut, ShieldCheck, CalendarClock, Menu } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth, hasAdminRole } from '../contexts/AuthContext'
 import Seo from './Seo'
@@ -25,14 +25,14 @@ export default function Layout() {
         </nav>
         <div className="hidden items-center gap-2 sm:flex">
           {user ? <>
-            {hasAdminRole(profile?.role) && <Link className="icon-button" to="/admin" title="Administration"><ShieldCheck size={19}/></Link>}
+            {hasAdminRole(profile?.role) && <><Link className="icon-button" to="/admin" title="Administration"><ShieldCheck size={19}/></Link><Link className="icon-button" to="/admin/sessions" title="Sessions de modération"><CalendarClock size={19}/></Link></>}
             <Link className="nav-link" to="/profile"><UserRound size={17}/>{profile?.display_name || 'Mon profil'}</Link>
             <button className="icon-button" onClick={() => void signOut()} title="Déconnexion"><LogOut size={18}/></button>
           </> : <Link to="/login" className="button-primary"><LogIn size={17}/> Connexion</Link>}
         </div>
         <button className="icon-button md:hidden" onClick={() => setMenuOpen(!menuOpen)} aria-label="Ouvrir le menu"><Menu/></button>
       </div>
-      {menuOpen && <div className="container-shell grid gap-1 pb-4 md:hidden">{nav.map(item=><Link key={item.to} to={item.to} onClick={()=>setMenuOpen(false)} className="nav-link"><item.icon size={18}/>{item.label}</Link>)}{user ? <><Link to="/profile" className="nav-link">Mon profil</Link><button className="nav-link" onClick={()=>void signOut()}>Déconnexion</button></> : <Link to="/login" className="nav-link">Connexion</Link>}</div>}
+      {menuOpen && <div className="container-shell grid gap-1 pb-4 md:hidden">{nav.map(item=><Link key={item.to} to={item.to} onClick={()=>setMenuOpen(false)} className="nav-link"><item.icon size={18}/>{item.label}</Link>)}{user ? <>{hasAdminRole(profile?.role) && <><Link to="/admin" onClick={()=>setMenuOpen(false)} className="nav-link"><ShieldCheck size={18}/> Administration</Link><Link to="/admin/sessions" onClick={()=>setMenuOpen(false)} className="nav-link"><CalendarClock size={18}/> Sessions de modération</Link></>}<Link to="/profile" className="nav-link">Mon profil</Link><button className="nav-link" onClick={()=>void signOut()}>Déconnexion</button></> : <Link to="/login" className="nav-link">Connexion</Link>}</div>}
     </header>
     <main id="main-content" tabIndex={-1} className="flex-1"><Outlet/></main>
     <footer className="mt-16 border-t border-slate-200 bg-white">
