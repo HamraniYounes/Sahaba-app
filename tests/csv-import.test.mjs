@@ -17,7 +17,7 @@ test('CSV import requires a strict known column set and rejects unknown or missi
 
 test('CSV validation protects types, bounds, timezone, URL and duplicate rows before insertion', () => {
   assert.match(csvSource, /LOCATION_CATEGORIES\.includes/)
-  assert.match(csvSource, /latitude and longitude/) || assert.match(csvSource, /latitude et longitude/)
+  assert.match(csvSource, /latitude et longitude/)
   assert.match(csvSource, /new URL\(raw\.website\)/)
   assert.match(csvSource, /new Intl\.DateTimeFormat\('en-US', \{ timeZone: raw\.timezone \}\)/)
   assert.match(csvSource, /seen\.has\(slug\)/)
