@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Clock, Globe, Mail, MapPin, Phone } from 'lucide-react'
 import type { Location, LocationClosure } from '../../types/database'
-import { DAY_KEYS, formatOpeningIntervals, getOpeningStatus, normalizeOpeningHours } from '../../lib/openingHours'
+import { DAY_KEYS, formatOpeningIntervals, getLocalDate, getOpeningStatus, normalizeOpeningHours } from '../../lib/openingHours'
 
 type Props = { location: Location; closures?: LocationClosure[] }
 
@@ -12,8 +12,7 @@ export default function LocationInfoCard({ location, closures = [] }: Props) {
   useEffect(() => { const timer = window.setInterval(() => setTick(value => value + 1), 60_000); return () => window.clearInterval(timer) }, [])
   const status = getOpeningStatus(location.opening_hours, location.timezone, closures)
   const hours = normalizeOpeningHours(location.opening_hours)
-  const today = new Date().toISOString().slice(0, 10)
-  const activeClosure = closures.find(closure => closure.starts_on <= today && (closure.ends_on === null || closure.ends_on >= today))
+  const activeClosure = closures.find(closure => closure.starts_on <= getLocalDate(new Date(), location.timezone) && (closure.ends_on === null || closure.ends_on >= getLocalDate(new Date(), location.timezone)))
   const statusLabel = status.reason === 'definitive' ? 'Définitivement fermé' : status.reason === 'temporary' ? 'Fermé temporairement' : status.reason === 'exceptional' ? 'Fermé exceptionnellement' : status.isOpen ? 'Ouvert maintenant' : 'Fermé actuellement'
   const hasCoordinates = location.latitude !== null && location.latitude !== undefined && location.longitude !== null && location.longitude !== undefined
   return <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft">
