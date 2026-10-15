@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Search, SlidersHorizontal, MapPin, ShieldCheck, ChevronDown, X } from 'lucide-react'
-import { isSupabaseConfigured } from '../lib/supabase'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import type { Location, LocationCategory } from '../types/database'
 import LocationCard from '../components/LocationCard'
 import { categoryLabel } from '../lib/utils'
@@ -30,22 +30,15 @@ export default function Home() {
       async function load() {
         if (!isSupabaseConfigured) { setLoading(false); setError('Configurez Supabase dans .env.local pour charger les lieux.'); return }
         setLoading(true); setError('')
-        let request = undefined as ReturnType<typeof import('../lib/supabase')['supabase']['from']> | undefined
-        void request
-        const queryBuilder = (await import('../lib/supabase')).supabase
-          .from('locations')
-          .select(LOCATION_LIST_SELECT)
-          .in('status',['published','claimed'])
-          .order('created_at',{ascending:false})
-          .limit(100)
-        if (category) queryBuilder.eq('category',category)
-        if (filters.halal) queryBuilder.eq('halal_full',true)
-        if (filters.alcohol) queryBuilder.eq('alcohol_free',true)
-        if (filters.prayer) queryBuilder.eq('prayer_room',true)
-        if (filters.vegan) queryBuilder.eq('vegan_options',true)
-        if (city.trim()) queryBuilder.ilike('city',`%${city.trim()}%`)
-        if (query.trim()) queryBuilder.or(`name.ilike.%${query.trim()}%,description.ilike.%${query.trim()}%,address.ilike.%${query.trim()}%`)
-        const {data,error:queryError} = await queryBuilder
+        let request = supabase.from('locations').select(LOCATION_LIST_SELECT).in('status',['published','claimed']).order('created_at',{ascending:false}).limit(100)
+        if (category) request = request.eq('category',category)
+        if (filters.halal) request = request.eq('halal_full',true)
+        if (filters.alcohol) request = request.eq('alcohol_free',true)
+        if (filters.prayer) request = request.eq('prayer_room',true)
+        if (filters.vegan) request = request.eq('vegan_options',true)
+        if (city.trim()) request = request.ilike('city',`%${city.trim()}%`)
+        if (query.trim()) request = request.or(`name.ilike.%${query.trim()}%,description.ilike.%${query.trim()}%,address.ilike.%${query.trim()}%`)
+        const {data,error:queryError} = await request
         if (!active) return
         if (queryError) setError(queryError.message)
         else setLocations((data || []) as Location[])
