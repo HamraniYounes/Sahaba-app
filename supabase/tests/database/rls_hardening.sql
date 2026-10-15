@@ -62,7 +62,7 @@ select ok(
   'claim approval rejects stale location state'
 );
 select ok(
-  strpos(lower(pg_get_functiondef('public.approve_location_claim(uuid)'::regprocedure)), "role = 'owner'::public.app_role") > 0,
+  strpos(lower(pg_get_functiondef('public.approve_location_claim(uuid)'::regprocedure)), 'role = ''owner''::public.app_role') > 0,
   'approved claim promotes a normal claimant to owner'
 );
 
