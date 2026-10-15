@@ -1,10 +1,10 @@
 import { Plus, Trash2 } from 'lucide-react'
-import { DAY_KEYS, emptyOpeningHours, formatOpeningIntervals, normalizeOpeningHours, validateOpeningHoursValue } from '../../lib/openingHours'
+import { DAY_KEYS, formatOpeningIntervals, normalizeOpeningHours, validateOpeningHoursValue } from '../../lib/openingHours'
 import type { DayKey, OpeningHours } from '../../types/database'
 
 const labels: Record<DayKey, string> = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' }
 
-type Props = { value: OpeningHours | unknown; onChange: (value: OpeningHours) => void }
+type Props = { value: unknown; onChange: (value: OpeningHours) => void }
 
 export default function OpeningHoursEditor({ value, onChange }: Props) {
   const hours = normalizeOpeningHours(value)
