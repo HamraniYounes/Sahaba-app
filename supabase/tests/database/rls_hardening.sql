@@ -1,7 +1,7 @@
 -- Database security and performance regression tests.
 begin;
 create extension if not exists pgtap;
-select plan(45);
+select plan(46);
 select ok(has_function_privilege('anon', 'public.increment_location_view(uuid)', 'execute'), 'anonymous users can execute the atomic view RPC');
 select ok(not has_function_privilege('public', 'public.increment_location_view(uuid)', 'execute'), 'public role cannot execute the view RPC');
 select ok(has_function_privilege('authenticated', 'public.approve_location_claim(uuid)', 'execute'), 'authenticated users can execute claim approval RPC');
