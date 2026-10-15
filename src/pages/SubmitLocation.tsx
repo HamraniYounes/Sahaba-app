@@ -4,17 +4,20 @@ import { MapPin, Info, Upload, Clock3 } from 'lucide-react'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { LocationCategory } from '../types/database'
+import { emptyOpeningHours, timezoneOptions } from '../lib/openingHours'
 import { createLocation } from '../services/locationService'
+import OpeningHoursEditor from '../components/location/OpeningHoursEditor'
 
 const categoryOptions: LocationCategory[] = ['restaurant','fast_food','cafe','boulangerie','boucherie','epicerie','mosquee','salle_priere','ecole_coran','association','funeraire','sante','bien_etre','vetements','librairie','finance','voyage','hebergement','services','autre']
 const labels: Record<string,string> = {restaurant:'Restaurant',fast_food:'Restauration rapide',cafe:'Café',boulangerie:'Boulangerie',boucherie:'Boucherie',epicerie:'Épicerie',mosquee:'Mosquée',salle_priere:'Salle de prière',ecole_coran:'École coranique',association:'Association',funeraire:'Services funéraires',sante:'Santé',bien_etre:'Bien-être',vetements:'Vêtements',librairie:'Librairie',finance:'Finance',voyage:'Voyage',hebergement:'Hébergement',services:'Services',autre:'Autre'}
-const days = [['monday','Lundi'],['tuesday','Mardi'],['wednesday','Mercredi'],['thursday','Jeudi'],['friday','Vendredi'],['saturday','Samedi'],['sunday','Dimanche']] as const
-const blankHours = Object.fromEntries(days.map(([key])=>[key,''])) as Record<string,string>
+
+const browserTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Brussels'
 
 export default function SubmitLocation() {
   const { user } = useAuth(); const navigate = useNavigate()
   const [form,setForm] = useState({name:'',category:'restaurant' as LocationCategory,address:'',city:'',country:'Belgique',phone:'',email:'',website:'',description:'',halal_full:false,alcohol_free:false,women_only:false,prayer_room:false,wudu_facilities:false,burkini_friendly:false,vegetarian_options:false,vegan_options:false,accessible:false,parking:false})
-  const [hours,setHours] = useState<Record<string,string>>(blankHours)
+  const [hours,setHours] = useState(emptyOpeningHours())
+  const [timezone,setTimezone] = useState(browserTimezone)
   const [photos,setPhotos] = useState<File[]>([])
   const [busy,setBusy] = useState(false); const [error,setError] = useState(''); const [success,setSuccess] = useState('')
   function update<K extends keyof typeof form>(key:K,value:typeof form[K]) { setForm(prev=>({...prev,[key]:value})) }
@@ -28,7 +31,7 @@ export default function SubmitLocation() {
         name: form.name, category: form.category, address: form.address, city: form.city, country: form.country,
         phone: form.phone, email: form.email, website: form.website, description: form.description,
         features: { halal_full: form.halal_full, alcohol_free: form.alcohol_free, women_only: form.women_only, prayer_room: form.prayer_room, wudu_facilities: form.wudu_facilities, burkini_friendly: form.burkini_friendly, vegetarian_options: form.vegetarian_options, vegan_options: form.vegan_options, accessible: form.accessible, parking: form.parking },
-        hours, photos, userId: user.id,
+        hours, timezone, photos, userId: user.id,
       })
       setSuccess('Votre proposition a été envoyée et attend une validation par la modération.')
       setTimeout(()=>navigate('/profile'),1500)
@@ -55,7 +58,7 @@ export default function SubmitLocation() {
         <label className="form-label">Pays *<input required autoComplete="country-name" value={form.country} onChange={e=>update('country',e.target.value)} placeholder="Belgique"/></label>
       </div><p className="mt-3 flex gap-2 text-xs leading-5 text-slate-500"><Info size={15} className="mt-0.5 shrink-0"/>Aucun champ de coordonnées n’est nécessaire : le géocodage se fait lors de la soumission. Géocodage : <a className="underline" href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank" rel="noreferrer">politique Nominatim</a>.</p></section>
       <section className="form-section"><h2 className="section-title flex items-center gap-2"><Upload size={18}/> Photos</h2><p className="mt-2 text-sm text-slate-500">Jusqu’à 5 photos JPEG, PNG ou WebP (5 Mo maximum chacune). La première sera utilisée comme photo principale.</p><label className="form-label mt-4">Ajouter des photos<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={e=>{const selected=Array.from(e.target.files||[]);if(selected.length>5){setError('Vous pouvez choisir 5 photos au maximum.');return}if(selected.some(f=>f.size>5*1024*1024)){setError('Chaque photo doit faire 5 Mo maximum.');return}setError('');setPhotos(selected)}}/></label>{photos.length>0&&<ul className="mt-3 list-inside list-disc text-sm text-slate-600">{photos.map((p,i)=><li key={`${p.name}-${i}`}>{p.name}</li>)}</ul>}</section>
-      <section className="form-section"><h2 className="section-title flex items-center gap-2"><Clock3 size={18}/> Horaires d’ouverture</h2><p className="mt-2 text-sm text-slate-500">Format libre, par exemple « 09:00–18:00 » ou « Fermé ».</p><div className="mt-4 grid gap-3 sm:grid-cols-2">{days.map(([key,label])=><label key={key} className="form-label">{label}<input value={hours[key]} onChange={e=>setHours(prev=>({...prev,[key]:e.target.value}))} placeholder="09:00–18:00 ou Fermé"/></label>)}</div></section>
+      <section className="form-section"><h2 className="section-title flex items-center gap-2"><Clock3 size={18}/> Horaires d’ouverture</h2><p className="mt-2 text-sm text-slate-500">Ajoutez plusieurs plages dans la même journée (par exemple 11h30–14h puis 18h–22h30). Le fuseau sert à calculer le statut « Ouvert maintenant ».</p><div className="mt-4"><OpeningHoursEditor value={hours} onChange={setHours}/></div><label className="form-label mt-4">Fuseau horaire<select value={timezone} onChange={e=>setTimezone(e.target.value)}>{timezoneOptions().map(zone=><option key={zone} value={zone}>{zone}</option>)}</select></label></section>
       <section className="form-section"><h2 className="section-title">Caractéristiques</h2><p className="mt-1 text-sm text-slate-500">Cochez uniquement les caractéristiques dont vous êtes raisonnablement certain.</p><div className="mt-5 grid gap-3 sm:grid-cols-2">{booleanFields.map(([key,label])=><label key={key} className="flex items-start gap-3 rounded-xl border border-slate-100 p-3 text-sm text-slate-700 hover:bg-sahaba-50/50"><input className="check-input mt-0.5" type="checkbox" checked={Boolean(form[key])} onChange={e=>update(key,e.target.checked as never)}/>{label}</label>)}</div></section>
       {error&&<div className="notice-error" role="alert">{error}</div>}{success&&<div className="notice-success" role="status">{success}</div>}
       <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row"><Link to="/" className="button-secondary justify-center">Annuler</Link><button type="submit" disabled={busy||!user} className="button-primary justify-center">{busy?'Géocodage et envoi…':'Soumettre à la modération'} <MapPin size={17}/></button></div>
