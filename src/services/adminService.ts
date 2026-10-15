@@ -85,7 +85,7 @@ export async function toggleReviewVisibility(id: string, hidden: boolean) {
 }
 
 function isUserRole(value: string): value is UserRole {
-  return value === 'admin' || value === 'moderator' || value === 'user'
+  return value === 'admin' || value === 'moderator' || value === 'owner' || value === 'user'
 }
 
 export async function changeUserRole(id: string, role: string) {
