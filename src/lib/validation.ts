@@ -1,4 +1,5 @@
-import type { LocationCategory } from '../types/database'
+import type { LocationCategory, OpeningHours } from '../types/database'
+import { normalizeOpeningHours, validateOpeningHoursValue } from './openingHours'
 
 export const LOCATION_CATEGORIES: LocationCategory[] = [
   'restaurant','fast_food','cafe','boulangerie','boucherie','epicerie','mosquee',
@@ -7,7 +8,6 @@ export const LOCATION_CATEGORIES: LocationCategory[] = [
 ]
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const HOURS_RE = /^(Fermé|ferme|\d{1,2}:\d{2}\s*[–-]\s*\d{1,2}:\d{2})(\s*[,;]\s*(Fermé|ferme|\d{1,2}:\d{2}\s*[–-]\s*\d{1,2}:\d{2}))*$/i
 
 export type LocationForm = {
   name: string
@@ -32,17 +32,16 @@ export function validateLocationForm(form: LocationForm): ValidationResult {
   if (form.phone.trim().length > 40) return { ok: false, message: 'Le téléphone doit faire 40 caractères maximum.' }
   if (form.email.trim() && (!EMAIL_RE.test(form.email.trim()) || form.email.trim().length > 254)) return { ok: false, message: 'L’adresse e-mail est invalide.' }
   if (form.website.trim()) {
-    try { const url = new URL(form.website.trim()); if (!['http:', 'https:'].includes(url.protocol)) throw new Error() } catch { return { ok: false, message: 'Le site web doit être une URL HTTP(S) valide.' } }
+    try { const url = new URL(form.website.trim()); if (!['http:', 'https:'].includes(url.protocol)) throw new Error() } catch { return { ok: false, message: 'Le site web doit être une URL HTTP(S) valide.' }
   }
   if (form.description.trim().length > 4000) return { ok: false, message: 'La description doit faire 4000 caractères maximum.' }
   return { ok: true }
 }
 
-export function validateOpeningHours(hours: Record<string, string>): ValidationResult {
-  for (const [day, value] of Object.entries(hours)) {
-    if (value.trim() && !HOURS_RE.test(value.trim())) return { ok: false, message: `Horaires invalides pour ${day}. Utilisez par exemple « 09:00–18:00 » ou « Fermé ».` }
-  }
-  return { ok: true }
+export function validateOpeningHours(hours: OpeningHours | Record<string, string>): ValidationResult {
+  const normalized = normalizeOpeningHours(hours)
+  const message = validateOpeningHoursValue(normalized)
+  return message ? { ok: false, message } : { ok: true }
 }
 
 export function validatePhotos(files: File[], existingCount = 0): ValidationResult {
