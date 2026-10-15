@@ -99,7 +99,7 @@ security definer
 set search_path=public
 as $$
 begin
-  if public.current_app_role() <> 'admin'
+  if public.current_app_role() is distinct from 'admin'
      and (new.role is distinct from old.role
        or new.contribution_badge is distinct from old.contribution_badge) then
     raise exception 'Only administrators can change role or contribution badge';
