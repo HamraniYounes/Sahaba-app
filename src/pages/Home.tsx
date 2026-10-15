@@ -11,9 +11,12 @@ import { listFavoriteIds, setFavorite } from '../services/communityService'
 const categories: LocationCategory[] = ['restaurant','fast_food','cafe','boucherie','epicerie','mosquee','salle_priere','ecole_coran','funeraire','sante','services']
 const emptyFilters = { halal:false, alcohol:false, prayer:false, vegan:false }
 const LOCATION_LIST_SELECT = 'id,slug,name,category,city,country,cover_image,halal_full,average_rating,review_count'
+const PAGE_SIZE = 24
 
 export default function Home() {
   const [locations,setLocations] = useState<Location[]>([])
+  const [totalCount,setTotalCount] = useState(0)
+  const [page,setPage] = useState(0)
   const [loading,setLoading] = useState(true)
   const [error,setError] = useState('')
   const [query,setQuery] = useState('')
@@ -27,10 +30,14 @@ export default function Home() {
   useEffect(() => {
     let active = true
     const timer = window.setTimeout(() => {
+      if (page !== 0) {
+        setPage(0)
+        return
+      }
       async function load() {
         if (!isSupabaseConfigured) { setLoading(false); setError('Configurez Supabase dans .env.local pour charger les lieux.'); return }
         setLoading(true); setError('')
-        let request = supabase.from('locations').select(LOCATION_LIST_SELECT).in('status',['published','claimed']).order('created_at',{ascending:false}).limit(100)
+        let request = supabase.from('locations').select(LOCATION_LIST_SELECT,{count:'exact'}).in('status',['published','claimed']).order('created_at',{ascending:false}).range(0,PAGE_SIZE-1)
         if (category) request = request.eq('category',category)
         if (filters.halal) request = request.eq('halal_full',true)
         if (filters.alcohol) request = request.eq('alcohol_free',true)
@@ -43,16 +50,16 @@ export default function Home() {
           const term = escapePostgrestSearchTerm(queryTerm)
           request = request.or(`name.ilike.%${term}%,description.ilike.%${term}%,address.ilike.%${term}%`)
         }
-        const {data,error:queryError} = await request
+        const {data,error:queryError,count} = await request
         if (!active) return
         if (queryError) setError(queryError.message)
-        else setLocations((data || []) as Location[])
+        else { setLocations((data || []) as Location[]); setTotalCount(count ?? 0) }
         setLoading(false)
       }
       void load()
     }, 300)
     return ()=>{active=false;window.clearTimeout(timer)}
-  },[query,city,category,filters])
+  },[query,city,category,filters,page])
 
   useEffect(()=>{
     let active = true
@@ -68,6 +75,9 @@ export default function Home() {
     const result=await setFavorite(user.id,id,!exists)
     if (result.error) setFavorites(prev=>exists?[...prev,id]:prev.filter(x=>x!==id))
   }
+  const hasNextPage=(page+1)*PAGE_SIZE<totalCount
+  const hasPreviousPage=page>0
+
   return <div>
     <section className="hero-section">
       <div className="container-shell relative z-10 py-14 sm:py-20 lg:py-24">
@@ -92,11 +102,14 @@ export default function Home() {
         <div className="flex flex-wrap gap-x-5 gap-y-3 sm:col-span-2">{([{key:'halal',label:'Halal'},{key:'alcohol',label:'Sans alcool'},{key:'prayer',label:'Salle de prière'},{key:'vegan',label:'Options véganes'}] as const).map(item=><label key={item.key} className="inline-flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" className="check-input" checked={filters[item.key]} onChange={e=>setFilters(prev=>({...prev,[item.key]:e.target.checked}))}/>{item.label}</label>)}</div>
         <button className="inline-flex items-center gap-2 text-sm font-semibold text-sahaba-700" onClick={()=>{setCategory('');setCity('');setQuery('');setFilters(emptyFilters)}}><X size={15}/> Effacer les filtres</button>
       </div>}
-      <div className="mt-7 flex items-center justify-between"><p className="text-sm text-slate-500">{loading?'Chargement…':`${locations.length} lieu${locations.length!==1?'x':''} trouvé${locations.length!==1?'s':''}`}</p><span className="inline-flex items-center gap-1.5 text-xs text-slate-400"><ShieldCheck size={14}/> Lieux soumis à modération</span></div>
+      <div className="mt-7 flex items-center justify-between"><p className="text-sm text-slate-500">{loading?'Chargement…':`${totalCount} lieu${totalCount!==1?'x':''} trouvé${totalCount!==1?'s':''}`}</p><span className="inline-flex items-center gap-1.5 text-xs text-slate-400"><ShieldCheck size={14}/> Lieux soumis à modération</span></div>
       {!isSupabaseConfigured && <div className="notice-warning mt-5"><strong>Configuration requise.</strong> {error} Copiez `.env.example` vers `.env.local`, puis ajoutez les identifiants de votre projet Supabase.</div>}
       {error && isSupabaseConfigured && <div className="notice-warning mt-5">{error}</div>}
       {loading ? <div className="location-grid mt-6">{[1,2,3,4,5,6].map(n=><div key={n} className="skeleton-card animate-pulse"><div className="aspect-[1.55/1] bg-slate-100"/><div className="space-y-3 p-4"><div className="h-4 w-2/3 rounded bg-slate-100"/><div className="h-3 w-1/2 rounded bg-slate-100"/></div></div>)}</div>
-      : locations.length ? <div className="location-grid mt-6">{locations.map((location,index)=><Fragment key={location.id}><LocationCard location={location} favorite={favorites.includes(location.id)} onFavorite={toggleFavorite}/>{locations.length > 0 && index === Math.min(2, locations.length - 1) && <Advertisements placement="home" variant="card"/>}</Fragment>)}</div>
+      : locations.length ? <>
+        <div className="location-grid mt-6">{locations.map((location,index)=><Fragment key={location.id}><LocationCard location={location} favorite={favorites.includes(location.id)} onFavorite={toggleFavorite}/>{locations.length > 0 && index === Math.min(2, locations.length - 1) && <Advertisements placement="home" variant="card"/>}</Fragment>)}</div>
+        {(hasPreviousPage || hasNextPage) && <div className="mt-8 flex items-center justify-center gap-3"><button className="button-secondary" disabled={!hasPreviousPage} onClick={()=>{setPage(value=>value-1);document.getElementById('results')?.scrollIntoView({behavior:'smooth'})}}>Précédent</button><span className="text-sm text-slate-500">Page {page+1} sur {Math.max(1,Math.ceil(totalCount/PAGE_SIZE))}</span><button className="button-secondary" disabled={!hasNextPage} onClick={()=>{setPage(value=>value+1);document.getElementById('results')?.scrollIntoView({behavior:'smooth'})}}>Suivant</button></div>}
+      </>
       : <div className="empty-state mt-8"><span className="empty-icon"><MapPin size={26}/></span><h3>Aucun lieu pour le moment</h3><p>Essayez de modifier vos filtres ou proposez le premier lieu de votre secteur.</p><a href="/submit" className="button-primary mt-4">Proposer un lieu</a></div>}
     </section>
     <section className="container-shell"><div className="contribute-banner"><div><p className="eyebrow-light">Construisons ensemble</p><h2 className="mt-2 font-display text-2xl font-semibold sm:text-3xl">Votre adresse peut aider quelqu'un.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">Ajoutez un lieu utile et contribuez à rendre l'annuaire plus complet pour toute la communauté.</p></div><a href="/submit" className="button-primary shrink-0">Ajouter un lieu <MapPin size={17}/></a></div></section>
