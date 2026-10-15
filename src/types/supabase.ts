@@ -60,7 +60,7 @@ export type Database = {
       }
       moderation_sessions: {
         Row: { id: string; title: string; scheduled_at: string; note: string | null; created_by: string; created_at: string }
-        Insert: { id?: string; title: string; scheduled_at: string; note?: string | null; created_at?: string; created_by: string }
+        Insert: { id?: string; title: string; scheduled_at: string; note?: string | null; created_at?: string }
         Update: Partial<Database['public']['Tables']['moderation_sessions']['Insert']>
         Relationships: []
       }
@@ -70,9 +70,22 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['ads']['Insert']>
         Relationships: []
       }
+      ownership_transfers: {
+        Row: { id: string; location_id: string; from_owner_id: string; to_user_id: string; message: string | null; status: 'pending' | 'approved' | 'rejected' | 'cancelled'; reviewed_at: string | null; created_at: string }
+        Insert: { id?: string; location_id: string; from_owner_id: string; to_user_id: string; message?: string | null; status?: 'pending' | 'approved' | 'rejected' | 'cancelled'; reviewed_at?: string | null; created_at?: string }
+        Update: Partial<Database['public']['Tables']['ownership_transfers']['Insert']>
+        Relationships: [{ foreignKeyName: 'ownership_transfers_location_id_fkey'; columns: ['location_id']; isOneToOne: false; referencedRelation: 'locations'; referencedColumns: ['id'] }]
+      }
     }
     Views: Record<string, never>
-    Functions: { increment_location_view: { Args: { p_location_id: string }; Returns: undefined }; approve_location_claim: { Args: { p_claim_id: string }; Returns: undefined } }
+    Functions: {
+      increment_location_view: { Args: { p_location_id: string }; Returns: undefined }
+      approve_location_claim: { Args: { p_claim_id: string }; Returns: undefined }
+      request_ownership_transfer: { Args: { p_location_id: string; p_target_email: string; p_message?: string }; Returns: string }
+      accept_ownership_transfer: { Args: { p_transfer_id: string }; Returns: undefined }
+      reject_ownership_transfer: { Args: { p_transfer_id: string }; Returns: undefined }
+      cancel_ownership_transfer: { Args: { p_transfer_id: string }; Returns: undefined }
+    }
     Enums: { app_role: 'admin' | 'moderator' | 'owner' | 'user'; location_status: 'pending' | 'published' | 'rejected' | 'claimed'; report_status: 'pending' | 'resolved' | 'rejected'; claim_status: 'pending' | 'approved' | 'rejected' | 'cancelled' }
     CompositeTypes: Record<string, never>
   }
