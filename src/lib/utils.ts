@@ -16,6 +16,15 @@ export function categoryLabel(category: string) {
   return labels[category] || category
 }
 
+/** Escapes user input before embedding it in a PostgREST .or() filter. */
+export function escapePostgrestSearchTerm(value: string) {
+  return value
+    .slice(0, 120)
+    .replace(/\\/g, '\\\\')
+    .replace(/[%_*]/g, '\\$&')
+    .replace(/[,.():]/g, '\\$&')
+}
+
 export function formatDate(value: string) {
   return new Intl.DateTimeFormat('fr-BE', { dateStyle: 'medium' }).format(new Date(value))
 }
