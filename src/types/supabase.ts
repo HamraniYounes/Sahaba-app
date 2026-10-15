@@ -10,300 +10,100 @@ export type Database = {
   public: {
     Tables: {
       profiles: {
-        Row: {
-          id: string
-          display_name: string | null
-          avatar_url: string | null
-          role: Database['public']['Enums']['app_role']
-          contribution_badge: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id: string
-          display_name?: string | null
-          avatar_url?: string | null
-          role?: Database['public']['Enums']['app_role']
-          contribution_badge?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          display_name?: string | null
-          avatar_url?: string | null
-          role?: Database['public']['Enums']['app_role']
-          contribution_badge?: string | null
-          created_at?: string
-          updated_at?: string
-        }
+        Row: { id: string; display_name: string | null; avatar_url: string | null; role: Database['public']['Enums']['app_role']; contribution_badge: string | null; created_at: string; updated_at: string }
+        Insert: { id: string; display_name?: string | null; avatar_url?: string | null; role?: Database['public']['Enums']['app_role']; contribution_badge?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; display_name?: string | null; avatar_url?: string | null; role?: Database['public']['Enums']['app_role']; contribution_badge?: string | null; created_at?: string; updated_at?: string }
         Relationships: []
       }
       locations: {
         Row: {
-          id: string
-          name: string
-          slug: string
-          category: string
-          address: string | null
-          city: string
-          country: string
-          latitude: number | null
-          longitude: number | null
-          phone: string | null
-          email: string | null
-          website: string | null
-          description: string | null
-          cover_image: string | null
-          photos: string[]
-          status: Database['public']['Enums']['location_status']
-          created_by: string
-          owner_id: string | null
-          halal_full: boolean
-          alcohol_free: boolean
-          women_only: boolean
-          prayer_room: boolean
-          wudu_facilities: boolean
-          burkini_friendly: boolean
-          vegetarian_options: boolean
-          vegan_options: boolean
-          accessible: boolean
-          parking: boolean
-          price_range: number | null
-          opening_hours: Json
-          average_rating: number
-          review_count: number
-          view_count: number
-          favorite_count: number
-          moderation_note: string | null
-          moderated_by: string | null
-          moderated_at: string | null
-          created_at: string
-          updated_at: string
+          id: string; name: string; slug: string; category: string; address: string | null; city: string; country: string
+          latitude: number | null; longitude: number | null; phone: string | null; email: string | null; website: string | null
+          description: string | null; cover_image: string | null; photos: string[]; status: Database['public']['Enums']['location_status']
+          created_by: string; owner_id: string | null; halal_full: boolean; alcohol_free: boolean; women_only: boolean
+          prayer_room: boolean; wudu_facilities: boolean; burkini_friendly: boolean; vegetarian_options: boolean; vegan_options: boolean
+          accessible: boolean; parking: boolean; price_range: number | null; opening_hours: Json; average_rating: number
+          review_count: number; view_count: number; favorite_count: number; moderation_note: string | null; moderated_by: string | null
+          moderated_at: string | null; created_at: string; updated_at: string
         }
         Insert: {
-          id?: string
-          name: string
-          slug: string
-          category: string
-          address?: string | null
-          city: string
-          country: string
-          latitude?: number | null
-          longitude?: number | null
-          phone?: string | null
-          email?: string | null
-          website?: string | null
-          description?: string | null
-          cover_image?: string | null
-          photos?: string[]
-          status?: Database['public']['Enums']['location_status']
-          created_by: string
-          owner_id?: string | null
-          halal_full?: boolean
-          alcohol_free?: boolean
-          women_only?: boolean
-          prayer_room?: boolean
-          wudu_facilities?: boolean
-          burkini_friendly?: boolean
-          vegetarian_options?: boolean
-          vegan_options?: boolean
-          accessible?: boolean
-          parking?: boolean
-          price_range?: number | null
-          opening_hours?: Json
-          average_rating?: number
-          review_count?: number
-          view_count?: number
-          favorite_count?: number
-          moderation_note?: string | null
-          moderated_by?: string | null
-          moderated_at?: string | null
-          created_at?: string
-          updated_at?: string
+          id?: string; name: string; slug: string; category: string; address?: string | null; city: string; country: string
+          latitude?: number | null; longitude?: number | null; phone?: string | null; email?: string | null; website?: string | null
+          description?: string | null; cover_image?: string | null; photos?: string[]; status?: Database['public']['Enums']['location_status']
+          created_by: string; owner_id?: string | null; halal_full?: boolean; alcohol_free?: boolean; women_only?: boolean
+          prayer_room?: boolean; wudu_facilities?: boolean; burkini_friendly?: boolean; vegetarian_options?: boolean; vegan_options?: boolean
+          accessible?: boolean; parking?: boolean; price_range?: number | null; opening_hours?: Json; average_rating?: number
+          review_count?: number; view_count?: number; favorite_count?: number; moderation_note?: string | null; moderated_by?: string | null
+          moderated_at?: string | null; created_at?: string; updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['locations']['Insert']>
-        Relationships: []
+        Relationships: [
+          { foreignKeyName: 'locations_created_by_fkey'; columns: ['created_by']; isOneToOne: false; referencedRelation: 'profiles'; referencedColumns: ['id'] },
+          { foreignKeyName: 'locations_owner_id_fkey'; columns: ['owner_id']; isOneToOne: false; referencedRelation: 'profiles'; referencedColumns: ['id'] },
+        ]
       }
       reviews: {
-        Row: {
-          id: string
-          location_id: string
-          user_id: string
-          rating: number
-          comment: string | null
-          is_hidden: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          location_id: string
-          user_id: string
-          rating: number
-          comment?: string | null
-          is_hidden?: boolean
-          created_at?: string
-          updated_at?: string
-        }
+        Row: { id: string; location_id: string; user_id: string; rating: number; comment: string | null; is_hidden: boolean; created_at: string; updated_at: string }
+        Insert: { id?: string; location_id: string; user_id: string; rating: number; comment?: string | null; is_hidden?: boolean; created_at?: string; updated_at?: string }
         Update: Partial<Database['public']['Tables']['reviews']['Insert']>
-        Relationships: []
+        Relationships: [
+          { foreignKeyName: 'reviews_location_id_fkey'; columns: ['location_id']; isOneToOne: false; referencedRelation: 'locations'; referencedColumns: ['id'] },
+          { foreignKeyName: 'reviews_user_id_fkey'; columns: ['user_id']; isOneToOne: false; referencedRelation: 'profiles'; referencedColumns: ['id'] },
+        ]
       }
       owner_replies: {
-        Row: {
-          id: string
-          review_id: string
-          owner_id: string
-          body: string
-          is_hidden: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          review_id: string
-          owner_id: string
-          body: string
-          is_hidden?: boolean
-          created_at?: string
-          updated_at?: string
-        }
+        Row: { id: string; review_id: string; owner_id: string; body: string; is_hidden: boolean; created_at: string; updated_at: string }
+        Insert: { id?: string; review_id: string; owner_id: string; body: string; is_hidden?: boolean; created_at?: string; updated_at?: string }
         Update: Partial<Database['public']['Tables']['owner_replies']['Insert']>
-        Relationships: []
+        Relationships: [
+          { foreignKeyName: 'owner_replies_review_id_fkey'; columns: ['review_id']; isOneToOne: true; referencedRelation: 'reviews'; referencedColumns: ['id'] },
+          { foreignKeyName: 'owner_replies_owner_id_fkey'; columns: ['owner_id']; isOneToOne: false; referencedRelation: 'profiles'; referencedColumns: ['id'] },
+        ]
       }
       favorites: {
-        Row: {
-          id: string
-          user_id: string
-          location_id: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          location_id: string
-          created_at?: string
-        }
+        Row: { id: string; user_id: string; location_id: string; created_at: string }
+        Insert: { id?: string; user_id: string; location_id: string; created_at?: string }
         Update: Partial<Database['public']['Tables']['favorites']['Insert']>
-        Relationships: []
+        Relationships: [
+          { foreignKeyName: 'favorites_location_id_fkey'; columns: ['location_id']; isOneToOne: false; referencedRelation: 'locations'; referencedColumns: ['id'] },
+          { foreignKeyName: 'favorites_user_id_fkey'; columns: ['user_id']; isOneToOne: false; referencedRelation: 'profiles'; referencedColumns: ['id'] },
+        ]
       }
       reports: {
-        Row: {
-          id: string
-          location_id: string
-          reporter_id: string | null
-          reason: string
-          details: string | null
-          status: Database['public']['Enums']['report_status']
-          resolved_by: string | null
-          resolved_at: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          location_id: string
-          reporter_id?: string | null
-          reason: string
-          details?: string | null
-          status?: Database['public']['Enums']['report_status']
-          resolved_by?: string | null
-          resolved_at?: string | null
-          created_at?: string
-        }
+        Row: { id: string; location_id: string; reporter_id: string | null; reason: string; details: string | null; status: Database['public']['Enums']['report_status']; resolved_by: string | null; resolved_at: string | null; created_at: string }
+        Insert: { id?: string; location_id: string; reporter_id?: string | null; reason: string; details?: string | null; status?: Database['public']['Enums']['report_status']; resolved_by?: string | null; resolved_at?: string | null; created_at?: string }
         Update: Partial<Database['public']['Tables']['reports']['Insert']>
-        Relationships: []
+        Relationships: [
+          { foreignKeyName: 'reports_location_id_fkey'; columns: ['location_id']; isOneToOne: false; referencedRelation: 'locations'; referencedColumns: ['id'] },
+          { foreignKeyName: 'reports_reporter_id_fkey'; columns: ['reporter_id']; isOneToOne: false; referencedRelation: 'profiles'; referencedColumns: ['id'] },
+        ]
       }
       claims: {
-        Row: {
-          id: string
-          location_id: string
-          claimant_id: string
-          evidence_path: string | null
-          message: string | null
-          status: Database['public']['Enums']['claim_status']
-          reviewed_by: string | null
-          reviewed_at: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          location_id: string
-          claimant_id: string
-          evidence_path?: string | null
-          message?: string | null
-          status?: Database['public']['Enums']['claim_status']
-          reviewed_by?: string | null
-          reviewed_at?: string | null
-          created_at?: string
-        }
+        Row: { id: string; location_id: string; claimant_id: string; evidence_path: string | null; message: string | null; status: Database['public']['Enums']['claim_status']; reviewed_by: string | null; reviewed_at: string | null; created_at: string }
+        Insert: { id?: string; location_id: string; claimant_id: string; evidence_path?: string | null; message?: string | null; status?: Database['public']['Enums']['claim_status']; reviewed_by?: string | null; reviewed_at?: string | null; created_at?: string }
         Update: Partial<Database['public']['Tables']['claims']['Insert']>
-        Relationships: []
+        Relationships: [
+          { foreignKeyName: 'claims_location_id_fkey'; columns: ['location_id']; isOneToOne: false; referencedRelation: 'locations'; referencedColumns: ['id'] },
+          { foreignKeyName: 'claims_claimant_id_fkey'; columns: ['claimant_id']; isOneToOne: false; referencedRelation: 'profiles'; referencedColumns: ['id'] },
+        ]
       }
       moderation_sessions: {
-        Row: {
-          id: string
-          title: string
-          scheduled_at: string
-          note: string | null
-          created_by: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          title: string
-          scheduled_at: string
-          note?: string | null
-          created_by: string
-          created_at?: string
-        }
+        Row: { id: string; title: string; scheduled_at: string; note: string | null; created_by: string; created_at: string }
+        Insert: { id?: string; title: string; scheduled_at: string; note?: string | null; created_by: string; created_at?: string }
         Update: Partial<Database['public']['Tables']['moderation_sessions']['Insert']>
         Relationships: []
       }
       ads: {
-        Row: {
-          id: string
-          title: string
-          description: string | null
-          cta_label: string | null
-          target_url: string | null
-          image_url: string | null
-          placement: string
-          is_active: boolean
-          starts_at: string | null
-          ends_at: string | null
-          created_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          title: string
-          description?: string | null
-          cta_label?: string | null
-          target_url?: string | null
-          image_url?: string | null
-          placement?: string
-          is_active?: boolean
-          starts_at?: string | null
-          ends_at?: string | null
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
+        Row: { id: string; title: string; description: string | null; cta_label: string | null; target_url: string | null; image_url: string | null; placement: string; is_active: boolean; starts_at: string | null; ends_at: string | null; created_by: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; title: string; description?: string | null; cta_label?: string | null; target_url?: string | null; image_url?: string | null; placement?: string; is_active?: boolean; starts_at?: string | null; ends_at?: string | null; created_by?: string | null; created_at?: string; updated_at?: string }
         Update: Partial<Database['public']['Tables']['ads']['Insert']>
         Relationships: []
       }
     }
     Views: Record<string, never>
     Functions: {
-      increment_location_view: {
-        Args: { p_location_id: string }
-        Returns: undefined
-      }
-      approve_location_claim: {
-        Args: { p_claim_id: string }
-        Returns: undefined
-      }
+      increment_location_view: { Args: { p_location_id: string }; Returns: undefined }
+      approve_location_claim: { Args: { p_claim_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: 'admin' | 'moderator' | 'user'
