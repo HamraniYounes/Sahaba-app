@@ -1,10 +1,10 @@
--- Database security regression tests.
+-- Database security and performance regression tests.
 -- Run with the Supabase test harness/pgTAP in an isolated test database.
 
 begin;
 create extension if not exists pgtap;
 
-select plan(14);
+select plan(20);
 
 -- The RPCs exist and expose only the intended execution surface.
 select has_function_privilege('anon','public.increment_location_view(uuid)','execute'),
@@ -42,11 +42,29 @@ select is(
   'rating trigger function is not callable by authenticated users'
 );
 
+-- Claim approval must lock and validate the location before ownership changes.
+select like(
+  pg_get_functiondef('public.approve_location_claim(uuid)'::regprocedure),
+  '%for update%',
+  'claim approval locks rows during validation'
+);
+select like(
+  pg_get_functiondef('public.approve_location_claim(uuid)'::regprocedure),
+  '%Location is no longer available for claim approval%',
+  'claim approval rejects stale location state'
+);
+
 -- Required integrity constraints remain present.
 select col_is_pk('public','locations','id','locations has a primary key');
 select col_not_null('public','locations','view_count','view_count remains non-null');
 select col_not_null('public','locations','favorite_count','favorite_count remains non-null');
 select col_not_null('public','locations','review_count','review_count remains non-null');
+
+-- Directory query indexes remain present for the expected filter/search shape.
+select has_index('public','locations','locations_public_category_created_idx','directory category/status index exists');
+select has_index('public','locations','locations_name_trgm_idx','name substring index exists');
+select has_index('public','locations','locations_city_trgm_idx','city substring index exists');
+select has_index('public','locations','locations_description_trgm_idx','description substring index exists');
 
 select * from finish();
 rollback;
