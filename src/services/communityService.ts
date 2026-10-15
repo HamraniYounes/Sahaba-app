@@ -17,6 +17,7 @@ export async function getLocationBySlug(slug: string) {
 }
 
 export async function incrementLocationViews(locationId: string, _currentCount?: number) {
+  void _currentCount
   return supabase.rpc('increment_location_view', { p_location_id: locationId })
 }
 
