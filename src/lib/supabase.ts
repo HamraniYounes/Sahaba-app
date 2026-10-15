@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '../types/supabase'
 
 const url = import.meta.env.VITE_SUPABASE_URL?.trim()
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim()
@@ -10,7 +11,7 @@ export const isSupabaseConfigured = Boolean(
 
 // Placeholder keeps the UI renderable before configuration. Gate every operation with isSupabaseConfigured.
 // Never expose a service_role key in frontend environment variables.
-export const supabase = createClient(
+export const supabase = createClient<Database>(
   isSupabaseConfigured ? url! : 'https://placeholder.supabase.co',
   isSupabaseConfigured ? anonKey! : 'placeholder-anon-key',
   { auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true, flowType: 'pkce' } },
