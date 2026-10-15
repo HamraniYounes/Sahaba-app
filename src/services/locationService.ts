@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase'
 import { geocodeAddress } from '../lib/geocoding'
 import { slugify } from '../lib/utils'
 import { validateLocationForm, validateOpeningHours, validatePhotos, type LocationForm } from '../lib/validation'
+import type { Database } from '../types/supabase'
 import type { Location } from '../types/database'
 
 export type LocationFeatures = Pick<Location, 'halal_full' | 'alcohol_free' | 'women_only' | 'prayer_room' | 'wudu_facilities' | 'burkini_friendly' | 'vegetarian_options' | 'vegan_options' | 'accessible' | 'parking'>
@@ -41,7 +42,7 @@ export async function createLocation(input: SubmitLocationInput) {
 
   const photos = await uploadLocationPhotos(input.userId, input.photos)
   const opening_hours = Object.fromEntries(Object.entries(input.hours).map(([day, value]) => [day, value.trim() || 'Fermé']))
-  const payload = {
+  const payload: Database['public']['Tables']['locations']['Insert'] = {
     name: input.name.trim(), category: input.category, address: input.address.trim() || null,
     city: input.city.trim(), country: input.country.trim(), phone: input.phone.trim() || null,
     email: input.email.trim() || null, website: input.website.trim() || null,
