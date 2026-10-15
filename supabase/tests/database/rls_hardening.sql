@@ -10,20 +10,19 @@ select plan(8);
 select has_function_privilege(
   'anon',
   'public.increment_location_view(uuid)',
-  'execute',
-  'atomic view RPC is callable'
+  'execute'
+),
+'atomic view RPC is callable';
+
+select is(
+  has_function_privilege('public', 'public.increment_location_view(uuid)', 'execute'),
+  false,
+  'public role cannot execute the view RPC'
 );
 
-select has_function_privilege(
-  'public',
-  'public.increment_location_view(uuid)',
-  'execute',
-  'public role cannot execute the view RPC'
-) is false;
-
 -- Trigger functions are present after migration.
-select has_function('public', 'protect_location_system_fields', 'trigger', 'system-field protection trigger exists');
-select has_function('public', 'protect_profile_role', 'trigger', 'profile role protection trigger exists');
+select has_function('public', 'protect_location_system_fields', 'trigger protection function exists');
+select has_function('public', 'protect_profile_role', 'profile role protection function exists');
 
 -- Required integrity constraints remain present.
 select col_is_pk('public', 'locations', 'id', 'locations has a primary key');
