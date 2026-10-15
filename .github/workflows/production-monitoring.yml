@@ -8,13 +8,12 @@ on:
 permissions:
   contents: read
 
-env:
-  PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
-
 jobs:
   smoke:
     name: Public availability smoke test
     runs-on: ubuntu-latest
+    env:
+      PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
     steps:
       - name: Check production endpoints
         run: |
