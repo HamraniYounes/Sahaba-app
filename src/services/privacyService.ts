@@ -50,6 +50,11 @@ export async function exportPersonalData(userId: string, email: string | null): 
   }
 }
 
+export async function deletePersonalAccount() {
+  const { error } = await supabase.rpc('delete_my_account')
+  if (error) throw new Error(`Suppression impossible : ${error.message}`)
+}
+
 export function downloadPersonalData(data: PersonalDataExport) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' })
   const url = URL.createObjectURL(blob)
