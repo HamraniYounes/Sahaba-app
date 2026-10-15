@@ -41,13 +41,13 @@ end; $$;
 
 create or replace function public.accept_ownership_transfer(p_transfer_id uuid)
 returns void language plpgsql security definer set search_path = '' as $$
-declare v_location_id uuid; v_target_id uuid; v_owner_id uuid; v_status public.location_status; v_transfer_status text; v_role public.app_role;
+declare v_location_id uuid; v_from_owner_id uuid; v_target_id uuid; v_owner_id uuid; v_status public.location_status; v_transfer_status text; v_role public.app_role;
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
-  select t.location_id, t.to_user_id, t.status into v_location_id, v_target_id, v_transfer_status from public.ownership_transfers t where t.id = p_transfer_id for update;
+  select t.location_id, t.from_owner_id, t.to_user_id, t.status into v_location_id, v_from_owner_id, v_target_id, v_transfer_status from public.ownership_transfers t where t.id = p_transfer_id for update;
   if v_target_id is null or v_target_id <> auth.uid() or v_transfer_status <> 'pending' then raise exception 'Transfer is not available for acceptance'; end if;
   select l.owner_id, l.status into v_owner_id, v_status from public.locations l where l.id = v_location_id for update;
-  if v_owner_id is null or v_status <> 'claimed'::public.location_status then raise exception 'Location is no longer transferable'; end if;
+  if v_owner_id is null or v_owner_id <> v_from_owner_id or v_status <> 'claimed'::public.location_status then raise exception 'Location is no longer transferable'; end if;
   update public.locations set owner_id = auth.uid(), status = 'claimed'::public.location_status where id = v_location_id;
   select p.role into v_role from public.profiles p where p.id = auth.uid() for update;
   if v_role = 'user'::public.app_role then update public.profiles set role = 'owner'::public.app_role where id = auth.uid(); end if;
