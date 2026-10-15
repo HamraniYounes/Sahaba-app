@@ -17,8 +17,25 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run lint
-      - run: npm run build
+      - name: Build application
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+        run: npm run build
       - name: Install Playwright Chromium
         run: npx --yes @playwright/test@1.55.0 install --with-deps chromium
       - name: Run E2E smoke tests
-        run: npx --yes @playwright/test@1.55.0 test
+        run: npx --yes @playwright/test@1.55.0 test e2e/smoke.spec.mjs
+      - name: Run authenticated E2E journey
+        if: github.event_name != 'pull_request'
+        env:
+          E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
+          E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
+          E2E_TEST_ADMIN_EMAIL: ${{ secrets.E2E_TEST_ADMIN_EMAIL }}
+          E2E_TEST_ADMIN_PASSWORD: ${{ secrets.E2E_TEST_ADMIN_PASSWORD }}
+        run: |
+          test -n "$E2E_TEST_USER_EMAIL" || (echo "Missing E2E_TEST_USER_EMAIL" && exit 1)
+          test -n "$E2E_TEST_USER_PASSWORD" || (echo "Missing E2E_TEST_USER_PASSWORD" && exit 1)
+          test -n "$E2E_TEST_ADMIN_EMAIL" || (echo "Missing E2E_TEST_ADMIN_EMAIL" && exit 1)
+          test -n "$E2E_TEST_ADMIN_PASSWORD" || (echo "Missing E2E_TEST_ADMIN_PASSWORD" && exit 1)
+          npx --yes @playwright/test@1.55.0 test e2e/authenticated-flow.spec.mjs
