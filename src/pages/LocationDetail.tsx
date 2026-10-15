@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { CheckCircle2, Flag, Heart, Share2 } from 'lucide-react'
 import { isSupabaseConfigured } from '../lib/supabase'
-import type { Location } from '../types/database'
+import type { Location, LocationClosure } from '../types/database'
 import { categoryLabel } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import Advertisements from '../components/Advertisements'
 import LocationGallery from '../components/location/LocationGallery'
 import LocationInfoCard from '../components/location/LocationInfoCard'
 import LocationReviews from '../components/location/LocationReviews'
+import { getLocationClosures } from '../services/locationService'
 import { getFavoriteState, getLocationBySlug, getLocationReviews, incrementLocationViews, setFavorite, submitClaim as createClaim, submitReport as createReport, upsertOwnerReply, upsertReview, type Review } from '../services/communityService'
 
 const features = [
@@ -21,6 +22,7 @@ export default function LocationDetail() {
   const { slug } = useParams()
   const { user } = useAuth()
   const [place, setPlace] = useState<Location | null>(null)
+  const [closures, setClosures] = useState<LocationClosure[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -50,8 +52,8 @@ export default function LocationDetail() {
       if (!descriptionTag) { descriptionTag = document.createElement('meta'); descriptionTag.name = 'description'; document.head.appendChild(descriptionTag) }
       descriptionTag.content = description
       if (viewedSlug.current !== slug) { viewedSlug.current = slug; void incrementLocationViews(data.id) }
-      const { data: reviewData } = await getLocationReviews(data.id)
-      if (active) setReviews((reviewData || []) as Review[])
+      const [{ data: reviewData }, { data: closureData }] = await Promise.all([getLocationReviews(data.id), getLocationClosures(data.id)])
+      if (active) { setReviews((reviewData || []) as Review[]); setClosures(closureData || []) }
       setLoading(false)
     }
     void load()
@@ -133,7 +135,7 @@ export default function LocationDetail() {
           <LocationReviews reviews={reviews} userId={user?.id} ownerId={place.owner_id} rating={rating} comment={comment} onRatingChange={setRating} onCommentChange={setComment} onSubmitReview={submitReview} replyDrafts={replyDrafts} onReplyDraftChange={(id, value) => setReplyDrafts(previous => ({ ...previous, [id]: value }))} onSubmitReply={submitOwnerReply} />
         </main>
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-          <LocationInfoCard location={place} />
+          <LocationInfoCard location={place} closures={closures} />
           {canClaim && <button className="button-secondary w-full justify-center" onClick={() => setClaimOpen(value => !value)}>Réclamer cette fiche</button>}
           {claimOpen && canClaim && <form onSubmit={submitClaim} className="rounded-2xl border border-slate-200 p-4"><label className="form-label">Informations pour vérifier votre lien avec l’établissement<textarea rows={3} maxLength={3000} value={claimMessage} onChange={e => setClaimMessage(e.target.value)} placeholder="Décrivez votre rôle ou les justificatifs disponibles…" /></label><button className="button-primary mt-3 w-full justify-center">Envoyer la demande</button></form>}
           <div className="grid grid-cols-2 gap-2"><button className="button-secondary justify-center" onClick={()=>void toggleFavorite()}><Heart size={16} fill={favorite ? 'currentColor' : 'none'} />{favorite ? 'Enregistré' : 'Favoris'}</button><button className="button-secondary justify-center" onClick={()=>void shareLocation()}><Share2 size={16} />Partager</button></div>
