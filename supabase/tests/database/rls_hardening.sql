@@ -1,7 +1,7 @@
 -- Database security and performance regression tests.
 begin;
 create extension if not exists pgtap;
-select plan(36);
+select plan(37);
 select ok(has_function_privilege('anon', 'public.increment_location_view(uuid)', 'execute'), 'anonymous users can execute the atomic view RPC');
 select ok(not has_function_privilege('public', 'public.increment_location_view(uuid)', 'execute'), 'public role cannot execute the view RPC');
 select ok(has_function_privilege('authenticated', 'public.approve_location_claim(uuid)', 'execute'), 'authenticated users can execute claim approval RPC');
@@ -38,5 +38,6 @@ select ok(has_function_privilege('authenticated', 'public.accept_ownership_trans
 select ok(strpos(lower(pg_get_functiondef('public.request_ownership_transfer(uuid,text,text)'::regprocedure)), 'auth.users') > 0, 'transfer request resolves the recipient server-side');
 select ok(strpos(lower(pg_get_functiondef('public.accept_ownership_transfer(uuid)'::regprocedure)), 'for update') > 0, 'transfer acceptance locks the transfer and location');
 select ok(strpos(lower(pg_get_functiondef('public.accept_ownership_transfer(uuid)'::regprocedure)), 'location is no longer transferable') > 0, 'transfer acceptance rejects stale ownership state');
+select ok(strpos(lower(pg_get_functiondef('public.accept_ownership_transfer(uuid)'::regprocedure)), 'from_owner_id') > 0, 'transfer acceptance remains bound to the original owner');
 select * from finish();
 rollback;
