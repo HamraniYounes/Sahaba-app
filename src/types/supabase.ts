@@ -54,7 +54,7 @@ export type Database = {
       }
       moderation_sessions: {
         Row: { id: string; title: string; scheduled_at: string; note: string | null; created_by: string; created_at: string }
-        Insert: { id?: string; title: string; scheduled_at: string; note?: string | null; created_by: string; created_at?: string }
+        Insert: { id?: string; title: string; scheduled_at: string; note?: string | null; created_by?: string; created_at?: string }
         Update: Partial<Database['public']['Tables']['moderation_sessions']['Insert']>
         Relationships: []
       }
@@ -67,7 +67,7 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: { increment_location_view: { Args: { p_location_id: string }; Returns: undefined }; approve_location_claim: { Args: { p_claim_id: string }; Returns: undefined } }
-    Enums: { app_role: 'admin' | 'moderator' | 'user'; location_status: 'pending' | 'published' | 'rejected' | 'claimed'; report_status: 'pending' | 'resolved' | 'rejected'; claim_status: 'pending' | 'approved' | 'rejected' | 'cancelled' }
+    Enums: { app_role: 'admin' | 'moderator' | 'owner' | 'user'; location_status: 'pending' | 'published' | 'rejected' | 'claimed'; report_status: 'pending' | 'resolved' | 'rejected'; claim_status: 'pending' | 'approved' | 'rejected' | 'cancelled' }
     CompositeTypes: Record<string, never>
   }
 }
