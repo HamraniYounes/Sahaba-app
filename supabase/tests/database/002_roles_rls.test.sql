@@ -9,8 +9,21 @@ values
 ('10000000-0000-4000-8000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rls-other@example.test', '', now(), '{"provider":"email","providers":["email"]}', '{"display_name":"RLS Other"}', now(), now()),
 ('10000000-0000-4000-8000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rls-moderator@example.test', '', now(), '{"provider":"email","providers":["email"]}', '{"display_name":"RLS Moderator"}', now(), now()),
 ('10000000-0000-4000-8000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rls-admin@example.test', '', now(), '{"provider":"email","providers":["email"]}', '{"display_name":"RLS Admin"}', now(), now());
-update public.profiles set role='moderator' where id='10000000-0000-4000-8000-000000000003';
-update public.profiles set role='admin' where id='10000000-0000-4000-8000-000000000004';
+
+-- Replace trigger-created defaults with explicit test roles before switching to an authenticated caller.
+delete from public.profiles where id in (
+  '10000000-0000-4000-8000-000000000001',
+  '10000000-0000-4000-8000-000000000002',
+  '10000000-0000-4000-8000-000000000003',
+  '10000000-0000-4000-8000-000000000004'
+);
+insert into public.profiles (id, display_name, role)
+values
+('10000000-0000-4000-8000-000000000001', 'RLS Owner', 'user'),
+('10000000-0000-4000-8000-000000000002', 'RLS Other', 'user'),
+('10000000-0000-4000-8000-000000000003', 'RLS Moderator', 'moderator'),
+('10000000-0000-4000-8000-000000000004', 'RLS Admin', 'admin');
+
 insert into public.locations (name, slug, category, city, country, status, created_by, owner_id)
 values ('RLS test location', 'rls-test-location', 'restaurant', 'Bruxelles', 'Belgique', 'pending', '10000000-0000-4000-8000-000000000001', null);
 
