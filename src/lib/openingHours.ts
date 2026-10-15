@@ -8,6 +8,7 @@ const DAY_LABELS: Record<DayKey, string> = {
 }
 
 const LEGACY_RANGE_RE = /^(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})$/
+let cachedTimezoneOptions: string[] | null = null
 
 export function emptyOpeningHours(): OpeningHours {
   return Object.fromEntries(DAY_KEYS.map(day => [day, []])) as OpeningHours
@@ -71,6 +72,10 @@ function localParts(date: Date, timeZone: string): { day: DayKey; date: string; 
   }
 }
 
+export function getLocalDate(date: Date, timeZone: string): string {
+  return localParts(date, timeZone).date
+}
+
 function previousDay(day: DayKey): DayKey {
   return DAY_KEYS[(DAY_KEYS.indexOf(day) + 6) % 7]
 }
@@ -107,6 +112,8 @@ export function getOpeningStatus(hoursValue: unknown, timeZone: string, closures
 }
 
 export function timezoneOptions(): string[] {
+  if (cachedTimezoneOptions) return cachedTimezoneOptions
   const values = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : []
-  return values.length ? values : ['Europe/Brussels', 'Europe/Paris', 'Europe/London', 'Africa/Casablanca', 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Kuala_Lumpur', 'America/New_York', 'America/Los_Angeles']
+  cachedTimezoneOptions = values.length ? values : ['Europe/Brussels', 'Europe/Paris', 'Europe/London', 'Africa/Casablanca', 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Kuala_Lumpur', 'America/New_York', 'America/Los_Angeles']
+  return cachedTimezoneOptions
 }
