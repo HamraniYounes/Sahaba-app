@@ -84,10 +84,10 @@ select ok(
   'closure identity protection function exists'
 );
 select ok(
-  pg_get_constraintdef(oid) like '%closure_type = ''definitive''%'
-  from pg_constraint
-  where conrelid = 'public.location_closures'::regclass
-    and conname = 'location_closures_dates_check',
+  (select pg_get_constraintdef(oid) like '%closure_type = ''definitive''%'
+   from pg_constraint
+   where conrelid = 'public.location_closures'::regclass
+     and conname = 'location_closures_dates_check'),
   'definitive closures cannot have an end date'
 );
 
