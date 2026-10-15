@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase'
 import type { Location } from '../types/database'
 
 export async function getUserLocations(userId: string) {
-  return supabase.from('locations').select('*').eq('created_by', userId).order('created_at', { ascending: false })
+  return supabase.from('locations').select('*').or(`created_by.eq.${userId},owner_id.eq.${userId}`).order('created_at', { ascending: false })
 }
 
 export async function getUserStats(userId: string) {
