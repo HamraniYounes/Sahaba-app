@@ -8,23 +8,19 @@ on:
 permissions:
   contents: read
 
+env:
+  PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+
 jobs:
   smoke:
     name: Public availability smoke test
     runs-on: ubuntu-latest
     steps:
-      - name: Skip when production URL is not configured
-        if: ${{ secrets.PRODUCTION_URL == '' }}
-        run: echo "PRODUCTION_URL is not configured; monitoring is intentionally skipped."
-
-      - name: Check homepage
-        if: ${{ secrets.PRODUCTION_URL != '' }}
-        env:
-          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
-        run: curl --fail --silent --show-error --location --max-time 20 --retry 2 --retry-delay 2 "$PRODUCTION_URL/" > /dev/null
-
-      - name: Check sitemap
-        if: ${{ secrets.PRODUCTION_URL != '' }}
-        env:
-          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
-        run: curl --fail --silent --show-error --location --max-time 20 --retry 2 --retry-delay 2 "$PRODUCTION_URL/sitemap.xml" > /dev/null
+      - name: Check production endpoints
+        run: |
+          if [ -z "$PRODUCTION_URL" ]; then
+            echo "PRODUCTION_URL is not configured; monitoring is intentionally skipped."
+            exit 0
+          fi
+          curl --fail --silent --show-error --location --max-time 20 --retry 2 --retry-delay 2 "$PRODUCTION_URL/" > /dev/null
+          curl --fail --silent --show-error --location --max-time 20 --retry 2 --retry-delay 2 "$PRODUCTION_URL/sitemap.xml" > /dev/null
