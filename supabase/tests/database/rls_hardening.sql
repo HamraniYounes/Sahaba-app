@@ -44,11 +44,11 @@ select is(
 
 -- Claim approval must lock and validate the location before ownership changes.
 select ok(
-  pg_get_functiondef('public.approve_location_claim(uuid)'::regprocedure) like '%for update%',
+  lower(pg_get_functiondef('public.approve_location_claim(uuid)'::regprocedure)) like '%for update%',
   'claim approval locks rows during validation'
 );
 select ok(
-  pg_get_functiondef('public.approve_location_claim(uuid)'::regprocedure) like '%Location is no longer available for claim approval%',
+  lower(pg_get_functiondef('public.approve_location_claim(uuid)'::regprocedure)) like '%location is no longer available for claim approval%',
   'claim approval rejects stale location state'
 );
 
