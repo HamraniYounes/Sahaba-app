@@ -1,19 +1,21 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MapPin, Star, Heart, PlusCircle, ShieldCheck } from 'lucide-react'
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { isSupabaseConfigured } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Location } from '../types/database'
 import { formatDate } from '../lib/utils'
+import { getUserLocations, getUserStats, updateProfileDisplayName } from '../services/profileService'
+
 export default function Profile(){
   const {user,profile,refreshProfile}=useAuth();const [name,setName]=useState(profile?.display_name||'');const [places,setPlaces]=useState<Location[]>([]);const [stats,setStats]=useState({reviews:0,favorites:0});const [message,setMessage]=useState('');const [loading,setLoading]=useState(true)
   useEffect(()=>{setName(profile?.display_name||'')},[profile])
   useEffect(()=>{let active=true;async function load(){if(!user||!isSupabaseConfigured){setLoading(false);return}
-    const [p,r,f]=await Promise.all([supabase.from('locations').select('*').eq('created_by',user.id).order('created_at',{ascending:false}),supabase.from('reviews').select('id',{count:'exact',head:true}).eq('user_id',user.id),supabase.from('favorites').select('id',{count:'exact',head:true}).eq('user_id',user.id)])
-    if(!active)return;setPlaces((p.data||[]) as Location[]);setStats({reviews:r.count||0,favorites:f.count||0});setLoading(false)
+    const [p,counts]=await Promise.all([getUserLocations(user.id),getUserStats(user.id)])
+    if(!active)return;setPlaces((p.data||[]) as Location[]);setStats({reviews:counts.reviews.count||0,favorites:counts.favorites.count||0});setLoading(false)
   }void load();return()=>{active=false}},[user])
   async function save(e:React.FormEvent){e.preventDefault();if(!user)return
-    const {error}=await supabase.from('profiles').update({display_name:name.trim()}).eq('id',user.id)
+    const {error}=await updateProfileDisplayName(user.id,name.trim())
     setMessage(error?error.message:'Profil mis à jour.');if(!error)await refreshProfile()
   }
   async function deleteAccount(){setMessage('La suppression de compte doit être implémentée côté serveur avec une Edge Function sécurisée. Contactez l’administrateur pour le moment.')}
