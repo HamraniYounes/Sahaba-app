@@ -157,8 +157,10 @@ revoke execute on function public.protect_location_system_fields() from public, 
 revoke execute on function public.refresh_location_rating() from public, anon, authenticated;
 revoke execute on function public.refresh_location_favorite_count() from public, anon, authenticated;
 revoke execute on function public.protect_profile_role() from public, anon, authenticated;
+revoke execute on function public.approve_location_claim(uuid) from public, anon;
 grant execute on function public.current_app_role() to anon, authenticated;
 grant execute on function public.is_admin_or_moderator() to anon, authenticated;
+grant execute on function public.approve_location_claim(uuid) to authenticated;
 
 drop policy if exists "anyone can submit a report" on public.reports;
 create policy "anyone can submit a report" on public.reports for insert
