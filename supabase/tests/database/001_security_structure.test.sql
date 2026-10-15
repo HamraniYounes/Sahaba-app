@@ -22,7 +22,19 @@ select ok((select relrowsecurity from pg_class where oid='public.claims'::regcla
 select ok((select relrowsecurity from pg_class where oid='public.moderation_sessions'::regclass), 'RLS enabled on moderation_sessions');
 select ok((select relrowsecurity from pg_class where oid='public.ads'::regclass), 'RLS enabled on ads');
 
-select has_policy('public', 'locations', 'signed-in users propose locations', 'proposal insert policy exists');
-select has_policy('public', 'locations', 'creator or owner updates location', 'creator, owner and moderation update policy exists');
+select ok(
+  exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='locations' and policyname='signed-in users propose locations'
+  ),
+  'proposal insert policy exists'
+);
+select ok(
+  exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='locations' and policyname='creator or owner updates location'
+  ),
+  'creator, owner and moderation update policy exists'
+);
 select * from finish();
 rollback;
