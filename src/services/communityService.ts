@@ -9,8 +9,6 @@ export interface Review {
   owner_replies?: { id: string; body: string; owner_id: string; created_at: string }[]
 }
 
-const REVIEW_SELECT = 'id,rating,comment,created_at,user_id,owner_replies(id,body,owner_id,created_at)'
-
 export async function getLocationBySlug(slug: string) {
   return supabase.from('locations').select('*').eq('slug', slug).maybeSingle()
 }
@@ -21,7 +19,24 @@ export async function incrementLocationViews(locationId: string, _currentCount?:
 }
 
 export async function getLocationReviews(locationId: string) {
-  return supabase.from('reviews').select(REVIEW_SELECT).eq('location_id', locationId).order('created_at', { ascending: false }).limit(50)
+  const reviews = await supabase.from('reviews').select('id,rating,comment,created_at,user_id').eq('location_id', locationId).order('created_at', { ascending: false }).limit(50)
+  if (reviews.error || !reviews.data?.length) return { data: reviews.data ?? [], error: reviews.error }
+
+  const reviewIds = reviews.data.map(review => review.id)
+  const replies = await supabase.from('owner_replies').select('id,review_id,body,owner_id,created_at').in('review_id', reviewIds)
+  if (replies.error) return { data: reviews.data, error: replies.error }
+
+  const repliesByReview = new Map<string, { id: string; body: string; owner_id: string; created_at: string }[]>()
+  for (const reply of replies.data ?? []) {
+    const current = repliesByReview.get(reply.review_id) ?? []
+    current.push({ id: reply.id, body: reply.body, owner_id: reply.owner_id, created_at: reply.created_at })
+    repliesByReview.set(reply.review_id, current)
+  }
+
+  return {
+    data: reviews.data.map(review => ({ ...review, owner_replies: repliesByReview.get(review.id) ?? [] })),
+    error: null,
+  }
 }
 
 export async function getFavoriteState(locationId: string, userId: string) {
