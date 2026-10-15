@@ -18,3 +18,7 @@ jobs:
       - run: npm test
       - run: npm run lint
       - run: npm run build
+      - name: Install Playwright Chromium
+        run: npx --yes playwright@1.55.0 install --with-deps chromium
+      - name: Run E2E smoke tests
+        run: npx --yes playwright@1.55.0 test
