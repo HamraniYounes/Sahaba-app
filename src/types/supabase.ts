@@ -11,6 +11,7 @@ export type ClaimStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
 export type LocationCategory = 'restaurant' | 'fast_food' | 'cafe' | 'boulangerie' | 'boucherie' | 'epicerie' | 'mosquee' | 'salle_priere' | 'ecole_coran' | 'association' | 'funeraire' | 'sante' | 'bien_etre' | 'vetements' | 'librairie' | 'finance' | 'voyage' | 'hebergement' | 'services' | 'autre'
 export type ClosureType = 'exceptional' | 'temporary' | 'definitive'
 export type OwnershipTransferStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
+export type RateLimitAction = 'location_create' | 'review_create' | 'claim_create' | 'report_create' | 'ownership_transfer_create'
 
 type ProfileRow = { id: string; display_name: string | null; avatar_url: string | null; role: AppRole; contribution_badge: string | null; created_at: string; updated_at: string }
 type LocationRow = { id: string; name: string; slug: string; category: LocationCategory; address: string | null; city: string; country: string; latitude: number | null; longitude: number | null; phone: string | null; email: string | null; website: string | null; description: string | null; cover_image: string | null; photos: string[]; status: LocationStatus; created_by: string; owner_id: string | null; halal_full: boolean; alcohol_free: boolean; women_only: boolean; prayer_room: boolean; wudu_facilities: boolean; burkini_friendly: boolean; vegetarian_options: boolean; vegan_options: boolean; accessible: boolean; parking: boolean; price_range: number | null; opening_hours: Json; timezone: string; average_rating: number; review_count: number; view_count: number; favorite_count: number; moderation_note: string | null; moderated_by: string | null; moderated_at: string | null; created_at: string; updated_at: string }
@@ -23,6 +24,7 @@ type ClaimRow = { id: string; location_id: string; claimant_id: string; evidence
 type ModerationSessionRow = { id: string; title: string; scheduled_at: string; note: string | null; created_by: string; created_at: string }
 type AdRow = { id: string; title: string; description: string | null; cta_label: string | null; target_url: string | null; image_url: string | null; placement: string; is_active: boolean; starts_at: string | null; ends_at: string | null; created_by: string | null; created_at: string; updated_at: string }
 type OwnershipTransferRow = { id: string; location_id: string; from_owner_id: string; to_user_id: string; message: string | null; status: OwnershipTransferStatus; reviewed_at: string | null; created_at: string }
+type RateLimitEventRow = { id: number; actor_id: string; action: RateLimitAction; created_at: string }
 
 export type Database = {
   public: {
@@ -38,6 +40,7 @@ export type Database = {
       moderation_sessions: { Row: ModerationSessionRow; Insert: { id?: string; title: string; scheduled_at: string; note?: string | null; created_by: string; created_at?: string }; Update: Partial<ModerationSessionRow>; Relationships: [] }
       ads: { Row: AdRow; Insert: { id?: string; title: string; description?: string | null; cta_label?: string | null; target_url?: string | null; image_url?: string | null; placement?: string; is_active?: boolean; starts_at?: string | null; ends_at?: string | null; created_by?: string | null; created_at?: string; updated_at?: string }; Update: Partial<AdRow>; Relationships: [] }
       ownership_transfers: { Row: OwnershipTransferRow; Insert: { id?: string; location_id: string; from_owner_id: string; to_user_id: string; message?: string | null; status?: OwnershipTransferStatus; reviewed_at?: string | null; created_at?: string }; Update: Partial<OwnershipTransferRow>; Relationships: [{ foreignKeyName: 'ownership_transfers_location_id_fkey'; columns: ['location_id']; isOneToOne: false; referencedRelation: 'locations'; referencedColumns: ['id'] }] }
+      rate_limit_events: { Row: RateLimitEventRow; Insert: { id?: number; actor_id: string; action: RateLimitAction; created_at?: string }; Update: Partial<RateLimitEventRow>; Relationships: [] }
     }
     Views: Record<string, never>
     Functions: {
@@ -48,6 +51,7 @@ export type Database = {
       reject_ownership_transfer: { Args: { p_transfer_id: string }; Returns: undefined }
       cancel_ownership_transfer: { Args: { p_transfer_id: string }; Returns: undefined }
       delete_my_account: { Args: Record<string, never>; Returns: undefined }
+      enforce_user_rate_limit: { Args: Record<string, never>; Returns: undefined }
     }
     Enums: { app_role: AppRole; location_status: LocationStatus; report_status: ReportStatus; claim_status: ClaimStatus }
     CompositeTypes: Record<string, never>
