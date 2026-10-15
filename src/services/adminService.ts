@@ -15,7 +15,7 @@ export type AdminRow = {
   location_id?: string | null
   location?: { name?: string | null; slug?: string | null; city?: string | null } | null
   display_name?: string | null
-  role?: string | null
+  role?: UserRole | null
   contribution_badge?: string | null
   title?: string | null
   description?: string | null
@@ -84,7 +84,14 @@ export async function toggleReviewVisibility(id: string, hidden: boolean) {
   return supabase.from('reviews').update({ is_hidden: hidden }).eq('id', id)
 }
 
-export async function changeUserRole(id: string, role: UserRole) {
+function isUserRole(value: string): value is UserRole {
+  return value === 'admin' || value === 'moderator' || value === 'user'
+}
+
+export async function changeUserRole(id: string, role: string) {
+  if (!isUserRole(role)) {
+    return { data: null, error: new Error('Rôle utilisateur invalide.') }
+  }
   return supabase.from('profiles').update({ role }).eq('id', id)
 }
 
