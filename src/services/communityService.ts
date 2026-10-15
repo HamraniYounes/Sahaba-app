@@ -16,8 +16,8 @@ export async function getLocationBySlug(slug: string) {
   return supabase.from('locations').select('*').eq('slug', slug).maybeSingle<Location>()
 }
 
-export async function incrementLocationViews(locationId: string, currentCount: number) {
-  return supabase.from('locations').update({ view_count: (currentCount || 0) + 1 }).eq('id', locationId)
+export async function incrementLocationViews(locationId: string, _currentCount?: number) {
+  return supabase.rpc('increment_location_view', { p_location_id: locationId })
 }
 
 export async function getLocationReviews(locationId: string) {
