@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import { Search, SlidersHorizontal, MapPin, ShieldCheck, ChevronDown, X } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import type { Location, LocationCategory } from '../types/database'
+import type { LocationCategory, LocationSummary } from '../types/database'
 import LocationCard from '../components/LocationCard'
 import { categoryLabel, escapePostgrestSearchTerm } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
@@ -14,7 +14,7 @@ const LOCATION_LIST_SELECT = 'id,slug,name,category,city,country,cover_image,hal
 const PAGE_SIZE = 24
 
 export default function Home() {
-  const [locations,setLocations] = useState<Location[]>([])
+  const [locations,setLocations] = useState<LocationSummary[]>([])
   const [totalCount,setTotalCount] = useState(0)
   const [page,setPage] = useState(0)
   const [loading,setLoading] = useState(true)
@@ -53,7 +53,7 @@ export default function Home() {
         const {data,error:queryError,count} = await request
         if (!active) return
         if (queryError) setError(queryError.message)
-        else { setLocations((data || []) as Location[]); setTotalCount(count ?? 0) }
+        else { setLocations(data || []); setTotalCount(count ?? 0) }
         setLoading(false)
       }
       void load()
