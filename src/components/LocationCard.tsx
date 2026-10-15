@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
 import { MapPin, Star, Heart, ArrowUpRight } from 'lucide-react'
-import type { Location } from '../types/database'
+import type { LocationSummary } from '../types/database'
 import { categoryLabel } from '../lib/utils'
 
-export default function LocationCard({ location, favorite, onFavorite }: { location: Location; favorite?: boolean; onFavorite?: (id:string)=>void }) {
+export default function LocationCard({ location, favorite, onFavorite }: { location: LocationSummary; favorite?: boolean; onFavorite?: (id:string)=>void }) {
   return <article className="location-card group">
     <Link to={`/location/${location.slug}`} className="relative block aspect-[1.55/1] overflow-hidden bg-sahaba-50">
       {location.cover_image ? <img src={location.cover_image} alt={location.name} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-500 group-hover:scale-105"/> : <div className="flex h-full items-center justify-center bg-gradient-to-br from-sahaba-100 via-emerald-50 to-amber-50"><MapPin size={38} className="text-sahaba-700/40"/></div>}
