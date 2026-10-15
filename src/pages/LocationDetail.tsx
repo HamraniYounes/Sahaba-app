@@ -1,75 +1,147 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { MapPin, Star, Phone, Globe, Mail, Heart, Share2, Flag, Clock, CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Flag, Heart, Share2 } from 'lucide-react'
 import { isSupabaseConfigured } from '../lib/supabase'
 import type { Location } from '../types/database'
 import { categoryLabel } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import Advertisements from '../components/Advertisements'
+import LocationGallery from '../components/location/LocationGallery'
+import LocationInfoCard from '../components/location/LocationInfoCard'
+import LocationReviews from '../components/location/LocationReviews'
 import { getFavoriteState, getLocationBySlug, getLocationReviews, incrementLocationViews, setFavorite, submitClaim as createClaim, submitReport as createReport, upsertOwnerReply, upsertReview, type Review } from '../services/communityService'
 
-export default function LocationDetail() {
-  const {slug}=useParams()
-  const {user}=useAuth()
-  const [place,setPlace]=useState<Location|null>(null)
-  const [reviews,setReviews]=useState<Review[]>([])
-  const [loading,setLoading]=useState(true)
-  const [error,setError]=useState('')
-  const [rating,setRating]=useState(5)
-  const [comment,setComment]=useState('')
-  const [notice,setNotice]=useState('')
-  const [favorite,setFavoriteState]=useState(false)
-  const [reportOpen,setReportOpen]=useState(false)
-  const [reportReason,setReportReason]=useState('incorrect')
-  const [claimOpen,setClaimOpen]=useState(false)
-  const [claimMessage,setClaimMessage]=useState('')
-  const [replyDrafts,setReplyDrafts]=useState<Record<string,string>>({})
-  const viewedSlug=useRef<string|null>(null)
+const features = [
+  ['halal_full', 'Halal'], ['alcohol_free', 'Sans alcool'], ['prayer_room', 'Salle de prière'], ['wudu_facilities', 'Installations wudu'],
+  ['women_only', 'Réservé aux femmes'], ['burkini_friendly', 'Burkini accepté'], ['vegetarian_options', 'Options végétariennes'], ['vegan_options', 'Options véganes'],
+  ['accessible', 'Accessible'], ['parking', 'Parking'],
+] as const
 
-  useEffect(()=>{
-    let active=true
-    async function load(){
-      if(!isSupabaseConfigured||!slug){setLoading(false);return}
-      setLoading(true)
-      setError('')
-      const {data,error}=await getLocationBySlug(slug)
-      if(!active)return
-      if(error||!data){setError('Ce lieu est introuvable ou n’est pas accessible.');setLoading(false);return}
+export default function LocationDetail() {
+  const { slug } = useParams()
+  const { user } = useAuth()
+  const [place, setPlace] = useState<Location | null>(null)
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [rating, setRating] = useState(5)
+  const [comment, setComment] = useState('')
+  const [notice, setNotice] = useState('')
+  const [favorite, setFavoriteState] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportReason, setReportReason] = useState('incorrect')
+  const [claimOpen, setClaimOpen] = useState(false)
+  const [claimMessage, setClaimMessage] = useState('')
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({})
+  const viewedSlug = useRef<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    async function load() {
+      if (!isSupabaseConfigured || !slug) { setLoading(false); return }
+      setLoading(true); setError('')
+      const { data, error: locationError } = await getLocationBySlug(slug)
+      if (!active) return
+      if (locationError || !data) { setError('Ce lieu est introuvable ou n’est pas accessible.'); setLoading(false); return }
       setPlace(data)
-      document.title=`${data.name} — Sahaba`
-      const description=[data.name,data.address,data.city,data.country,data.description].filter(Boolean).join(' · ').slice(0,300)
-      let descriptionTag=document.querySelector<HTMLMetaElement>('meta[name="description"]')
-      if(!descriptionTag){descriptionTag=document.createElement('meta');descriptionTag.name='description';document.head.appendChild(descriptionTag)}
-      descriptionTag.content=description
-      if(viewedSlug.current!==slug){viewedSlug.current=slug;void incrementLocationViews(data.id)}
-      const {data:rv}=await getLocationReviews(data.id)
-      if(active)setReviews((rv||[]) as Review[])
+      document.title = `${data.name} — Sahaba`
+      const description = [data.name, data.address, data.city, data.country, data.description].filter(Boolean).join(' · ').slice(0, 300)
+      let descriptionTag = document.querySelector<HTMLMetaElement>('meta[name="description"]')
+      if (!descriptionTag) { descriptionTag = document.createElement('meta'); descriptionTag.name = 'description'; document.head.appendChild(descriptionTag) }
+      descriptionTag.content = description
+      if (viewedSlug.current !== slug) { viewedSlug.current = slug; void incrementLocationViews(data.id) }
+      const { data: reviewData } = await getLocationReviews(data.id)
+      if (active) setReviews((reviewData || []) as Review[])
       setLoading(false)
     }
     void load()
-    return()=>{active=false}
-  },[slug])
+    return () => { active = false }
+  }, [slug])
 
-  useEffect(()=>{
-    if(!place||!user){setFavoriteState(false);return}
-    let active=true
-    void getFavoriteState(place.id,user.id).then(({data})=>{if(active)setFavoriteState(Boolean(data))})
-    return()=>{active=false}
-  },[place,user])
+  useEffect(() => {
+    if (!place || !user) { setFavoriteState(false); return }
+    let active = true
+    void getFavoriteState(place.id, user.id).then(({ data }) => { if (active) setFavoriteState(Boolean(data)) })
+    return () => { active = false }
+  }, [place, user])
 
-  async function reloadReviews(locationId:string){const {data,error}=await getLocationReviews(locationId);if(error){setNotice(error.message);return}setReviews((data||[]) as Review[])}
-  async function submitReview(e:React.FormEvent){e.preventDefault();if(!user){setNotice('Connectez-vous pour publier un avis.');return}if(!place)return;const {error}=await upsertReview(place.id,user.id,rating,comment.trim()||null);if(error){setNotice(error.message);return}setNotice('Votre avis a été enregistré.');setComment('');await reloadReviews(place.id)}
-  async function toggleFavorite(){if(!user){setNotice('Connectez-vous pour gérer vos favoris.');return}if(!place)return;const result=await setFavorite(user.id,place.id,!favorite);if(result.error)setNotice(result.error.message);else setFavoriteState(!favorite)}
-  async function submitReport(e:React.FormEvent){e.preventDefault();if(!place)return;const {error}=await createReport(place.id,user?.id||null,reportReason);setNotice(error?error.message:'Signalement envoyé pour examen.');setReportOpen(false)}
-  async function submitClaim(e:React.FormEvent){e.preventDefault();if(!user||!place){setNotice('Connectez-vous pour réclamer cette fiche.');return}const {error}=await createClaim(place.id,user.id,claimMessage.trim()||null);setNotice(error?'Votre demande n’a pas pu être envoyée.':'Votre demande de réclamation a été envoyée à la modération.');if(!error){setClaimOpen(false);setClaimMessage('')}}
-  async function submitOwnerReply(e:React.FormEvent,reviewId:string){e.preventDefault();if(!user||!place)return;const body=(replyDrafts[reviewId]||'').trim();if(!body)return;const {error}=await upsertOwnerReply(reviewId,user.id,body);if(error){setNotice(error.message);return}setReplyDrafts(p=>({...p,[reviewId]:''}));setNotice('Réponse du propriétaire enregistrée.');await reloadReviews(place.id)}
-  async function shareLocation(){if(!navigator.clipboard){setNotice('La copie du lien n’est pas disponible sur ce navigateur.');return}try{await navigator.clipboard.writeText(window.location.href);setNotice('Lien copié.')}catch{setNotice('Impossible de copier le lien.')}}
+  async function reloadReviews(locationId: string) {
+    const { data, error: reviewError } = await getLocationReviews(locationId)
+    if (reviewError) { setNotice(reviewError.message); return }
+    setReviews((data || []) as Review[])
+  }
+  async function submitReview(event: React.FormEvent) {
+    event.preventDefault(); if (!user || !place) { setNotice('Connectez-vous pour publier un avis.'); return }
+    const { error: reviewError } = await upsertReview(place.id, user.id, rating, comment.trim() || null)
+    if (reviewError) { setNotice(reviewError.message); return }
+    setNotice('Votre avis a été enregistré.'); setComment(''); await reloadReviews(place.id)
+  }
+  async function toggleFavorite() {
+    if (!user) { setNotice('Connectez-vous pour gérer vos favoris.'); return }
+    if (!place) return
+    const result = await setFavorite(user.id, place.id, !favorite)
+    if (result.error) setNotice(result.error.message); else setFavoriteState(!favorite)
+  }
+  async function submitReport(event: React.FormEvent) {
+    event.preventDefault(); if (!place) return
+    const { error: reportError } = await createReport(place.id, user?.id || null, reportReason)
+    setNotice(reportError ? reportError.message : 'Signalement envoyé pour examen.'); setReportOpen(false)
+  }
+  async function submitClaim(event: React.FormEvent) {
+    event.preventDefault(); if (!user || !place) { setNotice('Connectez-vous pour réclamer cette fiche.'); return }
+    const { error: claimError } = await createClaim(place.id, user.id, claimMessage.trim() || null)
+    setNotice(claimError ? 'Votre demande n’a pas pu être envoyée.' : 'Votre demande de réclamation a été envoyée à la modération.')
+    if (!claimError) { setClaimOpen(false); setClaimMessage('') }
+  }
+  async function submitOwnerReply(event: React.FormEvent, reviewId: string) {
+    event.preventDefault(); if (!user || !place) return
+    const body = (replyDrafts[reviewId] || '').trim(); if (!body) return
+    const { error: replyError } = await upsertOwnerReply(reviewId, user.id, body)
+    if (replyError) { setNotice(replyError.message); return }
+    setReplyDrafts(previous => ({ ...previous, [reviewId]: '' })); setNotice('Réponse du propriétaire enregistrée.'); await reloadReviews(place.id)
+  }
+  async function shareLocation() {
+    if (!navigator.clipboard) { setNotice('La copie du lien n’est pas disponible sur ce navigateur.'); return }
+    try { await navigator.clipboard.writeText(window.location.href); setNotice('Lien copié.') } catch { setNotice('Impossible de copier le lien.') }
+  }
 
-  if(loading)return <div className="page-wrap"><div className="loading-block">Chargement du lieu…</div></div>
-  if(!place)return <div className="page-wrap"><div className="empty-state"><h2>Lieu indisponible</h2><p>{error||'Ce lieu n’existe pas.'}</p><Link to="/" className="button-primary mt-4">Retour à l’exploration</Link></div></div>
-  const features=[['halal_full','Halal'],['alcohol_free','Sans alcool'],['prayer_room','Salle de prière'],['wudu_facilities','Installations wudu'],['women_only','Réservé aux femmes'],['burkini_friendly','Burkini accepté'],['vegetarian_options','Options végétariennes'],['vegan_options','Options véganes'],['accessible','Accessible'],['parking','Parking']] as const
-  const canClaim=Boolean(user&&place.status==='published'&&!place.owner_id)
-  const hasCoordinates=place.latitude!==null&&place.latitude!==undefined&&place.longitude!==null&&place.longitude!==undefined
+  if (loading) return <div className="page-wrap"><div className="loading-block">Chargement du lieu…</div></div>
+  if (!place) return <div className="page-wrap"><div className="empty-state"><h2>Lieu indisponible</h2><p>{error || 'Ce lieu n’existe pas.'}</p><Link to="/" className="button-primary mt-4">Retour à l’exploration</Link></div></div>
 
-  return <div><Advertisements placement="detail"/><div className="container-shell py-8 sm:py-12"><Link to="/" className="text-sm font-medium text-sahaba-700 hover:underline">← Retour aux résultats</Link><div className="mt-5 grid gap-8 lg:grid-cols-[1.3fr_.7fr]"><div><div className="overflow-hidden rounded-3xl bg-sahaba-50">{place.cover_image?<img src={place.cover_image} alt={place.name} className="max-h-[520px] w-full object-cover"/>:<div className="flex aspect-[1.6/1] items-center justify-center bg-gradient-to-br from-sahaba-100 to-amber-50"><MapPin size={64} className="text-sahaba-700/40"/></div>}</div>{place.photos?.length>1&&<div className="mt-3 grid grid-cols-3 gap-3">{place.photos.slice(1,6).map((photo,index)=><img key={photo} src={photo} alt={`${place.name} — photo ${index+2}`} loading="lazy" className="h-28 w-full rounded-xl object-cover sm:h-36"/>)}</div>}<div className="mt-7"><span className="eyebrow-light">{categoryLabel(place.category)}</span><h1 className="mt-2 font-display text-3xl font-semibold text-slate-900 sm:text-4xl">{place.name}</h1><p className="mt-3 flex items-center gap-2 text-slate-500"><MapPin size={17}/>{[place.address,place.city,place.country].filter(Boolean).join(', ')}</p><div className="mt-4 flex flex-wrap items-center gap-3"><span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-sm font-semibold text-amber-800"><Star size={15} className="fill-amber-400 text-amber-400"/>{place.review_count?place.average_rating.toFixed(1):'Pas encore noté'}{place.review_count?` · ${place.review_count} avis`:''}</span>{place.status==='claimed'&&<span className="inline-flex items-center gap-1 rounded-full bg-sahaba-50 px-3 py-1.5 text-sm font-semibold text-sahaba-800"><CheckCircle2 size={15}/> Propriétaire vérifié</span>}{user&&(place.owner_id===user.id||place.created_by===user.id)&&<Link to={`/location/${place.slug}/edit`} className="button-secondary">Modifier la fiche</Link>}</div></div><div className="mt-8 border-t border-slate-200 pt-7"><h2 className="font-display text-2xl font-semibold">À propos</h2><p className="mt-3 whitespace-pre-line leading-7 text-slate-600">{place.description||'Aucune description disponible pour le moment.'}</p></div><div className="mt-8 border-t border-slate-200 pt-7"><h2 className="font-display text-2xl font-semibold">Caractéristiques</h2><div className="mt-4 flex flex-wrap gap-2">{features.filter(([key])=>place[key]).map(([key,label])=><span key={key} className="rounded-full border border-sahaba-100 bg-sahaba-50 px-3 py-2 text-sm text-sahaba-800"><CheckCircle2 size={14} className="mr-1.5 inline"/>{label}</span>)}{features.every(([key])=>!place[key])&&<p className="text-sm text-slate-500">Aucune caractéristique renseignée.</p>}</div></div><div className="mt-8 border-t border-slate-200 pt-7"><h2 className="font-display text-2xl font-semibold">Avis de la communauté</h2>{user?<form onSubmit={submitReview} className="mt-4 rounded-2xl border border-slate-200 p-4"><label className="form-label">Votre note<select value={rating} onChange={e=>setRating(Number(e.target.value))}>{[5,4,3,2,1].map(n=><option key={n} value={n}>{n} / 5</option>)}</select></label><label className="form-label mt-3">Votre avis<textarea rows={3} value={comment} onChange={e=>setComment(e.target.value)} placeholder="Partagez votre expérience…"/></label><button className="button-primary mt-3">Publier l’avis</button></form>:<p className="mt-3 text-sm text-slate-500"><Link to="/login" className="font-semibold text-sahaba-700">Connectez-vous</Link> pour laisser un avis.</p>}{notice&&<p className="mt-3 text-sm text-sahaba-700">{notice}</p>}<div className="mt-5 space-y-4">{reviews.map(review=><article key={review.id} className="rounded-2xl border border-slate-100 p-4"><div className="flex items-center justify-between gap-3"><span className="text-sm font-semibold text-slate-800">Membre de la communauté</span><span className="text-xs text-slate-400">{new Date(review.created_at).toLocaleDateString('fr-BE')}</span></div><div className="mt-2 flex gap-0.5">{[1,2,3,4,5].map(n=><Star key={n} size={14} className={n<=review.rating?'fill-amber-400 text-amber-400':'text-slate-200'}/>)}</div>{review.comment&&<p className="mt-2 text-sm leading-6 text-slate-600">{review.comment}</p>}{review.owner_replies?.map(reply=><div key={reply.id} className="mt-3 rounded-xl bg-sahaba-50 p-3"><p className="text-xs font-semibold text-sahaba-800">Réponse du propriétaire</p><p className="mt-1 text-sm text-slate-700">{reply.body}</p></div>)}{user&&place.owner_id===user.id&&<form onSubmit={e=>void submitOwnerReply(e,review.id)} className="mt-3"><label className="form-label">Répondre à cet avis<textarea rows={2} maxLength={2000} value={replyDrafts[review.id]||''} onChange={e=>setReplyDrafts(p=>({...p,[review.id]:e.target.value}))} placeholder="Réponse du propriétaire…"/></label><button className="button-secondary mt-2">Publier la réponse</button></form>}</article>)}{!reviews.length&&<p className="mt-4 text-sm text-slate-500">Aucun avis publié. Soyez le premier à partager votre expérience.</p>}</div></div></div><aside className="space-y-4 lg:sticky lg:top-24 lg:self-start"><div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft"><h2 className="font-display text-xl font-semibold">Informations pratiques</h2><div className="mt-4 space-y-4 text-sm">{place.phone&&<a className="flex items-center gap-3 text-slate-600 hover:text-sahaba-700" href={`tel:${place.phone}`}><Phone size={17}/>{place.phone}</a>}{place.email&&<a className="flex items-center gap-3 text-slate-600 hover:text-sahaba-700" href={`mailto:${place.email}`}><Mail size={17}/>{place.email}</a>}{place.website&&<a className="flex items-center gap-3 break-all text-slate-600 hover:text-sahaba-700" href={place.website} target="_blank" rel="noreferrer"><Globe size={17}/>Site web</a>}<div className="flex items-start gap-3 text-slate-600"><Clock size={17} className="mt-0.5"/><div><p className="font-medium">Horaires d’ouverture</p>{Object.entries(place.opening_hours||{}).map(([day,hours])=><p key={day} className="mt-1 text-xs">{({monday:'Lundi',tuesday:'Mardi',wednesday:'Mercredi',thursday:'Jeudi',friday:'Vendredi',saturday:'Samedi',sunday:'Dimanche'} as Record<string,string>)[day]||day}: {String(hours||'Non renseigné')}</p>)}{!Object.keys(place.opening_hours||{}).length&&<p className="mt-1 text-xs">Horaires non renseignés</p>}</div></div></div>{hasCoordinates&&<a className="button-primary mt-5 w-full justify-center" href={`https://www.openstreetmap.org/?mlat=${place.latitude}&mlon=${place.longitude}#map=17/${place.latitude}/${place.longitude}`} target="_blank" rel="noreferrer">Voir sur la carte <MapPin size={16}/></a>}{hasCoordinates&&<div className="mt-4 overflow-hidden rounded-2xl border border-slate-200"><iframe title={`Carte de ${place.name}`} className="h-56 w-full" loading="lazy" referrerPolicy="no-referrer-when-downgrade" src={`https://www.openstreetmap.org/export/embed.html?bbox=${place.longitude!-0.01}%2C${place.latitude!-0.006}%2C${place.longitude!+0.01}%2C${place.latitude!+0.006}&layer=mapnik&marker=${place.latitude}%2C${place.longitude}`}/></div>}{canClaim&&<button className="button-secondary mt-4 w-full justify-center" onClick={()=>setClaimOpen(v=>!v)}>Réclamer cette fiche</button>}{claimOpen&&canClaim&&<form onSubmit={e=>void submitClaim(e)} className="mt-3 space-y-3"><label className="form-label">Informations pour vérifier votre lien avec l’établissement<textarea rows={3} maxLength={3000} value={claimMessage} onChange={e=>setClaimMessage(e.target.value)} placeholder="Décrivez votre rôle ou les justificatifs disponibles…"/></label><button className="button-primary w-full justify-center">Envoyer la demande</button></form>}<div className="mt-4 grid grid-cols-2 gap-2"><button className="button-secondary justify-center" onClick={()=>void toggleFavorite()}><Heart size={16} fill={favorite?'currentColor':'none'}/>{favorite?'Enregistré':'Favoris'}</button><button className="button-secondary justify-center" onClick={()=>void shareLocation()}><Share2 size={16}/>Partager</button></div><button className="mt-4 inline-flex items-center gap-2 text-sm text-slate-400 hover:text-rose-600" onClick={()=>setReportOpen(!reportOpen)}><Flag size={15}/> Signaler une erreur</button>{reportOpen&&<form onSubmit={submitReport} className="mt-3 space-y-3"><select className="form-control" value={reportReason} onChange={e=>setReportReason(e.target.value)}><option value="incorrect">Informations incorrectes</option><option value="obsolete">Informations obsolètes</option><option value="inappropriate">Contenu inapproprié</option><option value="closed">Établissement fermé</option><option value="other">Autre</option></select><button className="button-secondary w-full justify-center">Envoyer le signalement</button></form>}</div>{notice&&<div className="notice-success">{notice}</div>}<div className="rounded-3xl bg-sahaba-50 p-5"><h3 className="font-semibold text-sahaba-900">Une information à compléter ?</h3><p className="mt-2 text-sm leading-6 text-sahaba-800/75">Aidez la communauté en signalant les informations à corriger.</p><button className="mt-3 text-sm font-semibold text-sahaba-800 underline" onClick={()=>setReportOpen(true)}>Signaler une modification</button></div></aside></div></div></div>
+  const canClaim = Boolean(user && place.status === 'published' && !place.owner_id)
+  const enabledFeatures = features.filter(([key]) => place[key])
+
+  return <div>
+    <Advertisements placement="detail" />
+    <div className="container-shell py-8 sm:py-12">
+      <Link to="/" className="text-sm font-medium text-sahaba-700 hover:underline">← Retour aux résultats</Link>
+      <div className="mt-5 grid gap-8 lg:grid-cols-[1.3fr_.7fr]">
+        <main>
+          <LocationGallery name={place.name} coverImage={place.cover_image} photos={place.photos || []} />
+          <div className="mt-7">
+            <span className="eyebrow-light">{categoryLabel(place.category)}</span>
+            <h1 className="mt-2 font-display text-3xl font-semibold text-slate-900 sm:text-4xl">{place.name}</h1>
+            <p className="mt-3 text-slate-500">{[place.address, place.city, place.country].filter(Boolean).join(', ')}</p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <span className="inline-flex rounded-full bg-amber-50 px-3 py-1.5 text-sm font-semibold text-amber-800">{place.review_count ? `${place.average_rating.toFixed(1)} · ${place.review_count} avis` : 'Pas encore noté'}</span>
+              {place.status === 'claimed' && <span className="inline-flex items-center gap-1 rounded-full bg-sahaba-50 px-3 py-1.5 text-sm font-semibold text-sahaba-800"><CheckCircle2 size={15} /> Propriétaire vérifié</span>}
+              {user && (place.owner_id === user.id || place.created_by === user.id) && <Link to={`/location/${place.slug}/edit`} className="button-secondary">Modifier la fiche</Link>}
+            </div>
+          </div>
+          <section className="mt-8 border-t border-slate-200 pt-7"><h2 className="font-display text-2xl font-semibold">À propos</h2><p className="mt-3 whitespace-pre-line leading-7 text-slate-600">{place.description || 'Aucune description disponible pour le moment.'}</p></section>
+          <section className="mt-8 border-t border-slate-200 pt-7"><h2 className="font-display text-2xl font-semibold">Caractéristiques</h2><div className="mt-4 flex flex-wrap gap-2">{enabledFeatures.map(([key, label]) => <span key={key} className="rounded-full border border-sahaba-100 bg-sahaba-50 px-3 py-2 text-sm text-sahaba-800"><CheckCircle2 size={14} className="mr-1.5 inline" />{label}</span>)}{!enabledFeatures.length && <p className="text-sm text-slate-500">Aucune caractéristique renseignée.</p>}</div></section>
+          <LocationReviews reviews={reviews} userId={user?.id} ownerId={place.owner_id} rating={rating} comment={comment} onRatingChange={setRating} onCommentChange={setComment} onSubmitReview={submitReview} replyDrafts={replyDrafts} onReplyDraftChange={(id, value) => setReplyDrafts(previous => ({ ...previous, [id]: value }))} onSubmitReply={submitOwnerReply} />
+        </main>
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <LocationInfoCard location={place} />
+          {canClaim && <button className="button-secondary w-full justify-center" onClick={() => setClaimOpen(value => !value)}>Réclamer cette fiche</button>}
+          {claimOpen && canClaim && <form onSubmit={submitClaim} className="rounded-2xl border border-slate-200 p-4"><label className="form-label">Informations pour vérifier votre lien avec l’établissement<textarea rows={3} maxLength={3000} value={claimMessage} onChange={e => setClaimMessage(e.target.value)} placeholder="Décrivez votre rôle ou les justificatifs disponibles…" /></label><button className="button-primary mt-3 w-full justify-center">Envoyer la demande</button></form>}
+          <div className="grid grid-cols-2 gap-2"><button className="button-secondary justify-center" onClick={() => void toggleFavorite()}><Heart size={16} fill={favorite ? 'currentColor' : 'none'} />{favorite ? 'Enregistré' : 'Favoris'}</button><button className="button-secondary justify-center" onClick={() => void shareLocation()}><Share2 size={16} />Partager</button></div>
+          <button className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-rose-600" onClick={() => setReportOpen(value => !value)}><Flag size={15} /> Signaler une erreur</button>
+          {reportOpen && <form onSubmit={submitReport} className="space-y-3"><select className="form-control" value={reportReason} onChange={e => setReportReason(e.target.value)}><option value="incorrect">Informations incorrectes</option><option value="obsolete">Informations obsolètes</option><option value="duplicate">Doublon</option><option value="other">Autre</option></select><button className="button-secondary w-full justify-center">Envoyer le signalement</button></form>}
+          {notice && <p className="text-sm text-sahaba-700">{notice}</p>}
+        </aside>
+      </div>
+    </div>
+  </div>
 }
