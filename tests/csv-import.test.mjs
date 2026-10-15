@@ -32,9 +32,10 @@ test('import is batched, checks existing slugs, and never bypasses Supabase RLS'
   assert.match(serviceSource, /rowError/)
 })
 
-test('admin import provides preview and blocks insertion while validation errors exist', () => {
+test('admin import provides preview and blocks insertion until validated rows exist', () => {
   assert.match(uiSource, /Aperçu avant insertion/)
-  assert.match(uiSource, /disabled=\{Boolean\(validationErrors\.length\) \|\| importing\}/)
+  assert.match(uiSource, /disabled=\{!rows\.length \|\| importing\}/)
+  assert.match(uiSource, /Lignes exclues de l’insertion/)
   assert.match(uiSource, /Journal de l’import/)
   assert.match(uiSource, /Télécharger le modèle/)
   assert.match(adminSource, /\['import','Import CSV'\]/)
