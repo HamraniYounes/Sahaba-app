@@ -22,6 +22,8 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
         run: npm run build
+      - name: Install Playwright test runner
+        run: npm install --no-save --no-package-lock @playwright/test@1.55.0
       - name: Install Playwright Chromium
         run: npx --yes @playwright/test@1.55.0 install --with-deps chromium
       - name: Run E2E smoke tests
