@@ -1,7 +1,7 @@
 -- Database security and performance regression tests.
 begin;
 create extension if not exists pgtap;
-select plan(54);
+select plan(55);
 select ok(has_function_privilege('anon', 'public.increment_location_view(uuid)', 'execute'), 'anonymous users can execute the atomic view RPC');
 select ok(not has_function_privilege('public', 'public.increment_location_view(uuid)', 'execute'), 'public role cannot execute the view RPC');
 select ok(has_function_privilege('authenticated', 'public.approve_location_claim(uuid)', 'execute'), 'authenticated users can execute claim approval RPC');
@@ -11,7 +11,7 @@ select ok(has_function_privilege('authenticated', 'public.is_admin_or_moderator(
 select ok(to_regprocedure('public.protect_location_system_fields()') is not null, 'location trigger protection function exists');
 select ok(to_regprocedure('public.protect_profile_role()') is not null, 'profile role protection function exists');
 select ok(not has_function_privilege('anon', 'public.protect_location_system_fields()', 'execute'), 'location trigger function is not callable by anon');
-select ok(not has_function_privilege('authenticated', 'public.refresh_location_rating()', 'execute'), 'rating trigger function is not callable by authenticated users');
+select ok(not has_function_privilege('authenticated', 'public.refresh_location_rating()' , 'execute'), 'rating trigger function is not callable by authenticated users');
 select ok(strpos(lower(pg_get_functiondef('public.approve_location_claim(uuid)'::regprocedure)), 'for update') > 0, 'claim approval locks rows during validation');
 select ok(strpos(lower(pg_get_functiondef('public.approve_location_claim(uuid)'::regprocedure)), 'location is no longer available for claim approval') > 0, 'claim approval rejects stale location state');
 select ok(strpos(lower(pg_get_functiondef('public.approve_location_claim(uuid)'::regprocedure)), 'role = ''owner''::public.app_role') > 0, 'approved claim promotes a normal claimant to owner');
