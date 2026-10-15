@@ -11,7 +11,7 @@ const LEGACY_RANGE_RE = /^(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})$/
 let cachedTimezoneOptions: string[] | null = null
 
 export function emptyOpeningHours(): OpeningHours {
-  return Object.fromEntries(DAY_KEYS.map(day => [day, []])) as OpeningHours
+  return { monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] }
 }
 
 function validTime(value: unknown): value is string {
@@ -36,7 +36,9 @@ function normalizeIntervals(value: unknown): OpeningInterval[] {
 
 export function normalizeOpeningHours(value: unknown): OpeningHours {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
-  return Object.fromEntries(DAY_KEYS.map(day => [day, normalizeIntervals(source[day])])) as OpeningHours
+  const normalized = emptyOpeningHours()
+  for (const day of DAY_KEYS) normalized[day] = normalizeIntervals(source[day])
+  return normalized
 }
 
 export function validateOpeningHoursValue(hours: OpeningHours): string | null {
