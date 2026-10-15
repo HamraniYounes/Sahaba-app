@@ -1,7 +1,7 @@
 -- Database security and performance regression tests.
 begin;
 create extension if not exists pgtap;
-select plan(42);
+select plan(45);
 select ok(has_function_privilege('anon', 'public.increment_location_view(uuid)', 'execute'), 'anonymous users can execute the atomic view RPC');
 select ok(not has_function_privilege('public', 'public.increment_location_view(uuid)', 'execute'), 'public role cannot execute the view RPC');
 select ok(has_function_privilege('authenticated', 'public.approve_location_claim(uuid)', 'execute'), 'authenticated users can execute claim approval RPC');
@@ -44,5 +44,9 @@ select ok((select relrowsecurity from pg_class where oid = 'public.moderation_se
 select ok(to_regclass('public.moderation_sessions_scheduled_idx') is not null, 'moderation sessions are indexed by schedule');
 select ok(exists (select 1 from pg_policies where schemaname='public' and tablename='moderation_sessions' and policyname='moderators can create moderation sessions'), 'moderators have a dedicated session creation policy');
 select ok(exists (select 1 from pg_policies where schemaname='public' and tablename='moderation_sessions' and policyname='moderators can delete moderation sessions'), 'moderators have a dedicated session deletion policy');
+select ok(to_regprocedure('public.delete_my_account()') is not null, 'self-service account deletion function exists');
+select ok(not has_function_privilege('anon', 'public.delete_my_account()', 'execute'), 'anonymous users cannot delete accounts');
+select ok(has_function_privilege('authenticated', 'public.delete_my_account()', 'execute'), 'authenticated users can delete their own account');
+select ok(strpos(lower(pg_get_functiondef('public.delete_my_account()'::regprocedure)), 'created_by') > 0, 'account deletion protects submitted locations');
 select * from finish();
 rollback;
