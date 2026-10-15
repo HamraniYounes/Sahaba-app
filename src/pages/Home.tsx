@@ -21,7 +21,7 @@ export default function Home() {
   const [error,setError] = useState('')
   const [query,setQuery] = useState('')
   const [city,setCity] = useState('')
-  const [category,setCategory] = useState('')
+  const [category,setCategory] = useState<LocationCategory | ''>('')
   const [filters,setFilters] = useState(emptyFilters)
   const [showFilters,setShowFilters] = useState(false)
   const [favorites,setFavorites] = useState<string[]>([])
@@ -92,13 +92,13 @@ export default function Home() {
           <label className="search-field"><MapPin size={19}/><span className="sr-only">Ville</span><input value={city} maxLength={120} onChange={e=>setCity(e.target.value)} placeholder="Ville ou région"/></label>
           <button className="button-primary search-submit" onClick={()=>document.getElementById('results')?.scrollIntoView({behavior:'smooth'})}>Rechercher <Search size={17}/></button>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-white/75"><span className="mr-1">Recherches fréquentes :</span>{['Restaurant halal','Mosquée','Salle de prière','Boucherie'].map((label,i)=><button key={label} className="hero-chip" onClick={()=>{setCategory(['restaurant','mosquee','salle_priere','boucherie'][i]);document.getElementById('results')?.scrollIntoView({behavior:'smooth'})}}>{label}</button>)}</div>
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-white/75"><span className="mr-1">Recherches fréquentes :</span>{['Restaurant halal','Mosquée','Salle de prière','Boucherie'].map((label,i)=><button key={label} className="hero-chip" onClick={()=>{setCategory(['restaurant','mosquee','salle_priere','boucherie'][i] as LocationCategory);document.getElementById('results')?.scrollIntoView({behavior:'smooth'})}}>{label}</button>)}</div>
       </div>
     </section>
     <section className="container-shell py-10 sm:py-14" id="results">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="eyebrow-light">Explorer la communauté</p><h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">Des adresses à découvrir</h2><p className="mt-2 text-slate-500">Une sélection de lieux partagés par la communauté.</p></div><button className={`button-secondary self-start ${showFilters?'border-sahaba-600 text-sahaba-700':''}`} onClick={()=>setShowFilters(!showFilters)}><SlidersHorizontal size={17}/> Filtres <ChevronDown size={16} className={showFilters?'rotate-180':''}/></button></div>
       {showFilters && <div className="filter-panel mt-6">
-        <label className="filter-label">Catégorie<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">Toutes les catégories</option>{categories.map(c=><option key={c} value={c}>{categoryLabel(c)}</option>)}</select></label>
+        <label className="filter-label">Catégorie<select value={category} onChange={e=>setCategory(e.target.value as LocationCategory | '')}><option value="">Toutes les catégories</option>{categories.map(c=><option key={c} value={c}>{categoryLabel(c)}</option>)}</select></label>
         <div className="flex flex-wrap gap-x-5 gap-y-3 sm:col-span-2">{([{key:'halal',label:'Halal'},{key:'alcohol',label:'Sans alcool'},{key:'prayer',label:'Salle de prière'},{key:'vegan',label:'Options véganes'}] as const).map(item=><label key={item.key} className="inline-flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" className="check-input" checked={filters[item.key]} onChange={e=>setFilters(prev=>({...prev,[item.key]:e.target.checked}))}/>{item.label}</label>)}</div>
         <button className="inline-flex items-center gap-2 text-sm font-semibold text-sahaba-700" onClick={()=>{setCategory('');setCity('');setQuery('');setFilters(emptyFilters)}}><X size={15}/> Effacer les filtres</button>
       </div>}
