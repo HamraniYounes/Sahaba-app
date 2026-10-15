@@ -70,8 +70,8 @@ export function validateCsvText(text: string, userId: string): CsvValidationResu
   const seen = new Set<string>()
   for (let i = 1; i < matrix.length; i += 1) {
     const line = i + 1
-    const raw = Object.fromEntries(CSV_LOCATION_COLUMNS.map(column => [column, (matrix[i][indexes[column]] ?? '').trim()])) as CsvLocationRow
-    raw.rowNumber = line
+    const rawValues = Object.fromEntries(CSV_LOCATION_COLUMNS.map(column => [column, (matrix[i][indexes[column]] ?? '').trim()])) as Record<CsvColumn, string>
+    const raw: CsvLocationRow = { ...rawValues, rowNumber: line }
     try {
       if (!raw.name || raw.name.length > 140) throw new Error('name est obligatoire et limité à 140 caractères.')
       if (!LOCATION_CATEGORIES.includes(raw.category as never)) throw new Error('category est invalide.')
