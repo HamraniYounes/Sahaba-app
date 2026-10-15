@@ -1,20 +1,23 @@
 import { Fragment, useEffect, useState } from 'react'
 import { Search, SlidersHorizontal, MapPin, ShieldCheck, ChevronDown, X } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import type { LocationCategory, LocationSummary } from '../types/database'
+import type { LocationCategory, LocationClosure, LocationSummary } from '../types/database'
 import LocationCard from '../components/LocationCard'
 import { categoryLabel, escapePostgrestSearchTerm } from '../lib/utils'
+import { getOpeningStatus } from '../lib/openingHours'
 import { useAuth } from '../contexts/AuthContext'
 import Advertisements from '../components/Advertisements'
+import { getLocationClosuresForLocations } from '../services/locationService'
 import { listFavoriteIds, setFavorite } from '../services/communityService'
 
 const categories: LocationCategory[] = ['restaurant','fast_food','cafe','boucherie','epicerie','mosquee','salle_priere','ecole_coran','funeraire','sante','services']
 const emptyFilters = { halal:false, alcohol:false, prayer:false, vegan:false }
-const LOCATION_LIST_SELECT = 'id,slug,name,category,city,country,cover_image,halal_full,average_rating,review_count'
+const LOCATION_LIST_SELECT = 'id,slug,name,category,city,country,cover_image,halal_full,average_rating,review_count,opening_hours,timezone'
 const PAGE_SIZE = 24
 
 export default function Home() {
   const [locations,setLocations] = useState<LocationSummary[]>([])
+  const [closures,setClosures] = useState<LocationClosure[]>([])
   const [totalCount,setTotalCount] = useState(0)
   const [page,setPage] = useState(0)
   const [loading,setLoading] = useState(true)
@@ -25,15 +28,15 @@ export default function Home() {
   const [filters,setFilters] = useState(emptyFilters)
   const [showFilters,setShowFilters] = useState(false)
   const [favorites,setFavorites] = useState<string[]>([])
+  const [, setTick] = useState(0)
   const { user } = useAuth()
+
+  useEffect(() => { const timer = window.setInterval(() => setTick(value => value + 1), 60_000); return () => window.clearInterval(timer) }, [])
 
   useEffect(() => {
     let active = true
     const timer = window.setTimeout(() => {
-      if (page !== 0) {
-        setPage(0)
-        return
-      }
+      if (page !== 0) { setPage(0); return }
       async function load() {
         if (!isSupabaseConfigured) { setLoading(false); setError('Configurez Supabase dans .env.local pour charger les lieux.'); return }
         setLoading(true); setError('')
@@ -43,17 +46,18 @@ export default function Home() {
         if (filters.alcohol) request = request.eq('alcohol_free',true)
         if (filters.prayer) request = request.eq('prayer_room',true)
         if (filters.vegan) request = request.eq('vegan_options',true)
-        const cityTerm = city.trim()
-        const queryTerm = query.trim()
+        const cityTerm = city.trim(); const queryTerm = query.trim()
         if (cityTerm) request = request.ilike('city',`%${escapePostgrestSearchTerm(cityTerm)}%`)
-        if (queryTerm) {
-          const term = escapePostgrestSearchTerm(queryTerm)
-          request = request.or(`name.ilike.%${term}%,description.ilike.%${term}%,address.ilike.%${term}%`)
-        }
+        if (queryTerm) { const term = escapePostgrestSearchTerm(queryTerm); request = request.or(`name.ilike.%${term}%,description.ilike.%${term}%,address.ilike.%${term}%`) }
         const {data,error:queryError,count} = await request
         if (!active) return
         if (queryError) setError(queryError.message)
-        else { setLocations(data || []); setTotalCount(count ?? 0) }
+        else {
+          const nextLocations = data || []
+          setLocations(nextLocations); setTotalCount(count ?? 0)
+          const closureResult = await getLocationClosuresForLocations(nextLocations.map(location => location.id))
+          if (active) setClosures(closureResult.data || [])
+        }
         setLoading(false)
       }
       void load()
@@ -107,7 +111,7 @@ export default function Home() {
       {error && isSupabaseConfigured && <div className="notice-warning mt-5">{error}</div>}
       {loading ? <div className="location-grid mt-6">{[1,2,3,4,5,6].map(n=><div key={n} className="skeleton-card animate-pulse"><div className="aspect-[1.55/1] bg-slate-100"/><div className="space-y-3 p-4"><div className="h-4 w-2/3 rounded bg-slate-100"/><div className="h-3 w-1/2 rounded bg-slate-100"/></div></div>)}</div>
       : locations.length ? <>
-        <div className="location-grid mt-6">{locations.map((location,index)=><Fragment key={location.id}><LocationCard location={location} favorite={favorites.includes(location.id)} onFavorite={toggleFavorite}/>{locations.length > 0 && index === Math.min(2, locations.length - 1) && <Advertisements placement="home" variant="card"/>}</Fragment>)}</div>
+        <div className="location-grid mt-6">{locations.map((location,index)=><Fragment key={location.id}><LocationCard location={location} isOpen={getOpeningStatus(location.opening_hours, location.timezone, closures.filter(closure => closure.location_id === location.id)).isOpen} favorite={favorites.includes(location.id)} onFavorite={toggleFavorite}/>{locations.length > 0 && index === Math.min(2, locations.length - 1) && <Advertisements placement="home" variant="card"/>}</Fragment>)}</div>
         {(hasPreviousPage || hasNextPage) && <div className="mt-8 flex items-center justify-center gap-3"><button className="button-secondary" disabled={!hasPreviousPage} onClick={()=>{setPage(value=>value-1);document.getElementById('results')?.scrollIntoView({behavior:'smooth'})}}>Précédent</button><span className="text-sm text-slate-500">Page {page+1} sur {Math.max(1,Math.ceil(totalCount/PAGE_SIZE))}</span><button className="button-secondary" disabled={!hasNextPage} onClick={()=>{setPage(value=>value+1);document.getElementById('results')?.scrollIntoView({behavior:'smooth'})}}>Suivant</button></div>}
       </>
       : <div className="empty-state mt-8"><span className="empty-icon"><MapPin size={26}/></span><h3>Aucun lieu pour le moment</h3><p>Essayez de modifier vos filtres ou proposez le premier lieu de votre secteur.</p><a href="/submit" className="button-primary mt-4">Proposer un lieu</a></div>}
