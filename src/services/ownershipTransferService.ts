@@ -4,11 +4,12 @@ import type { Database } from '../types/supabase'
 export type OwnershipTransfer = Database['public']['Tables']['ownership_transfers']['Row']
 
 export async function requestOwnershipTransfer(locationId: string, targetEmail: string, message = '') {
-  return supabase.rpc('request_ownership_transfer', {
+  const args: { p_location_id: string; p_target_email: string; p_message?: string } = {
     p_location_id: locationId,
     p_target_email: targetEmail,
-    p_message: message || null,
-  })
+  }
+  if (message.trim()) args.p_message = message.trim()
+  return supabase.rpc('request_ownership_transfer', args)
 }
 
 export async function getIncomingOwnershipTransfers(userId: string) {
