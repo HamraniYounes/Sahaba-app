@@ -1,5 +1,4 @@
 import { supabase } from '../lib/supabase'
-import type { Location } from '../types/database'
 
 export interface Review {
   id: string
@@ -13,7 +12,7 @@ export interface Review {
 const REVIEW_SELECT = 'id,rating,comment,created_at,user_id,owner_replies(id,body,owner_id,created_at)'
 
 export async function getLocationBySlug(slug: string) {
-  return supabase.from('locations').select('*').eq('slug', slug).maybeSingle<Location>()
+  return supabase.from('locations').select('*').eq('slug', slug).maybeSingle()
 }
 
 export async function incrementLocationViews(locationId: string, _currentCount?: number) {
