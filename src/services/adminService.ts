@@ -1,7 +1,29 @@
 import { supabase } from '../lib/supabase'
 import type { Location } from '../types/database'
 
-export type AdminRow = Record<string, unknown>
+export type AdminRow = {
+  id: string
+  name?: string | null
+  reason?: string | null
+  details?: string | null
+  message?: string | null
+  claimant_id?: string | null
+  rating?: number | null
+  comment?: string | null
+  is_hidden?: boolean
+  created_at?: string | null
+  location_id?: string | null
+  location?: { name?: string | null; slug?: string | null; city?: string | null } | null
+  display_name?: string | null
+  role?: string | null
+  contribution_badge?: string | null
+  title?: string | null
+  description?: string | null
+  cta_label?: string | null
+  target_url?: string | null
+  placement?: 'home' | 'detail' | 'both'
+  is_active?: boolean
+}
 export type AdminTab = 'pending' | 'published' | 'reports' | 'claims' | 'reviews' | 'users' | 'ads' | 'stats'
 export type AdInput = { title: string; description: string | null; cta_label: string | null; target_url: string | null; placement: 'home' | 'detail' | 'both'; is_active: boolean }
 
