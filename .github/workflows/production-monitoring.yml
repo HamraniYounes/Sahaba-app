@@ -1,0 +1,30 @@
+name: Production monitoring
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Public availability smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip when production URL is not configured
+        if: ${{ secrets.PRODUCTION_URL == '' }}
+        run: echo "PRODUCTION_URL is not configured; monitoring is intentionally skipped."
+
+      - name: Check homepage
+        if: ${{ secrets.PRODUCTION_URL != '' }}
+        env:
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+        run: curl --fail --silent --show-error --location --max-time 20 --retry 2 --retry-delay 2 "$PRODUCTION_URL/" > /dev/null
+
+      - name: Check sitemap
+        if: ${{ secrets.PRODUCTION_URL != '' }}
+        env:
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+        run: curl --fail --silent --show-error --location --max-time 20 --retry 2 --retry-delay 2 "$PRODUCTION_URL/sitemap.xml" > /dev/null
