@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Location } from '../types/database'
+import type { Location, UserRole } from '../types/database'
 
 export type AdminRow = {
   id: string
@@ -68,10 +68,10 @@ export async function approveLocationClaim(claimId: string) {
 }
 
 export async function resolveModerationItem(table: 'reports' | 'claims', id: string, approved: boolean) {
-  const payload = table === 'claims'
-    ? { status: 'rejected', reviewed_at: new Date().toISOString() }
-    : { status: approved ? 'resolved' : 'rejected', resolved_at: new Date().toISOString() }
-  return supabase.from(table).update(payload).eq('id', id)
+  if (table === 'claims') {
+    return supabase.from('claims').update({ status: 'rejected', reviewed_at: new Date().toISOString() }).eq('id', id)
+  }
+  return supabase.from('reports').update({ status: approved ? 'resolved' : 'rejected', resolved_at: new Date().toISOString() }).eq('id', id)
 }
 
 export async function saveAd(ad: AdInput, editingId: string | null) {
@@ -84,7 +84,7 @@ export async function toggleReviewVisibility(id: string, hidden: boolean) {
   return supabase.from('reviews').update({ is_hidden: hidden }).eq('id', id)
 }
 
-export async function changeUserRole(id: string, role: string) {
+export async function changeUserRole(id: string, role: UserRole) {
   return supabase.from('profiles').update({ role }).eq('id', id)
 }
 
