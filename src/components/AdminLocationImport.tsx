@@ -34,7 +34,8 @@ export default function AdminLocationImport() {
       const imported = await importLocationsInBatches(rows)
       const validationLog = validationErrors.map(message => ({ row: Number(message.match(/^Ligne (\d+)/)?.[1] ?? 1), status: 'error' as const, message }))
       const preparationErrors = preparationLog.filter(entry => entry.status === 'error').length
-      setResult({ ...imported, errors: imported.errors + validationLog.length + preparationErrors, log: [...validationLog, ...preparationLog, ...imported.log].sort((a, b) => a.row - b.row) })
+      const geocoded = preparationLog.filter(entry => entry.status === 'geocoded').length
+      setResult({ ...imported, geocoded, errors: imported.errors + validationLog.length + preparationErrors, log: [...validationLog, ...preparationLog, ...imported.log].sort((a, b) => a.row - b.row) })
     } finally { setImporting(false) }
   }
   return <section className="mt-6 space-y-5">
