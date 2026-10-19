@@ -14,10 +14,11 @@
 
 ## Configuration requise
 1. Copier `.env.example` vers `.env.local` et définir `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` (clé publique uniquement).
-2. Exécuter `supabase/migrations/001_initial_schema.sql` puis `supabase/migrations/002_storage_and_production.sql` dans l'éditeur SQL Supabase.
+2. Exécuter les migrations Supabase dans l'ordre dans une base de test puis en production contrôlée.
 3. Créer un compte utilisateur puis attribuer le premier rôle admin depuis le SQL Editor avec l'UUID réel du compte : `update public.profiles set role='admin' where id='UUID';`.
 4. Vérifier les règles d'authentification, la confirmation e-mail, les URL de redirection et la configuration SMTP dans Supabase.
-5. Héberger en HTTPS. Ne jamais placer une clé `service_role` dans le frontend.
+5. Déployer la fonction Edge `geocode` avant d'activer la soumission/géocodification en production et conserver `verify_jwt = true`.
+6. Héberger en HTTPS. Ne jamais placer une clé `service_role` dans le frontend.
 
 ## Tests automatisés
 - `npm test` : tests de garde-fous du dépôt (ne remplace pas les tests navigateur/E2E).
@@ -46,5 +47,5 @@
 - Les en-têtes sont fournis pour Netlify (`netlify.toml` et `public/_headers`). Adapter et vérifier la CSP sur tout autre hébergeur. N’ajouter `includeSubDomains` ou `preload` à HSTS qu’après avoir vérifié que tous les sous-domaines sont exclusivement HTTPS et que le domaine respecte les critères de préchargement.
 - Le rendu reste une SPA : le sitemap aide les robots, mais un pré-rendu/SSR reste recommandé pour un SEO robuste et des aperçus sociaux par fiche.
 - L'internationalisation n'est pas complète. Seul le français est activé. Le helper RTL et les styles sont des fondations, pas une validation de l'interface arabe. Traduire et vérifier toutes les pages, erreurs, e-mails, publicités et textes légaux; effectuer des tests clavier, mobile, zoom et lecteur d'écran avant d'activer chaque langue.
-- Nominatim public : le trafic agrégé d'une application doit rester sous 1 requête/seconde; fournir un Referer ou User-Agent identifiant l'application, afficher l'attribution OpenStreetMap, mettre en cache, éviter tout autocomplete et toute géocodification en masse. Le cache et la temporisation du navigateur ne sont qu'une protection locale, pas une limite globale. Pour un trafic important, déployer un proxy avec cache/limitation globale ou utiliser un fournisseur adapté. Le service doit pouvoir être remplacé sans mise à jour de l'application.
+- Nominatim public : le trafic agrégé d'une application doit rester sous 1 requête/seconde. Le frontend conserve un cache et une temporisation locale, tandis que la fonction Edge `geocode` réserve un créneau dans Supabase avant chaque appel Nominatim afin d'appliquer une limite globale à l'ensemble de l'application. La fonction doit être déployée avec `verify_jwt = true`, utiliser un User-Agent identifiant l'application, conserver l'attribution OpenStreetMap et ne jamais accepter d'autocomplete ou de géocodification de masse non contrôlée. Pour un trafic important, remplacer Nominatim public par un fournisseur adapté sans modifier le contrat `geocodeAddress`.
 - Mettre en place sauvegardes, surveillance, alertes, politique de conservation, procédure de suppression/export des données et revue RGPD.
