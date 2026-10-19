@@ -7,7 +7,7 @@ const read = path => readFile(new URL(path, import.meta.url), 'utf8')
 test('le géocodage passe par un proxy authentifié avec une limite globale', async () => {
   const client = await read('../src/lib/geocoding.ts')
   const config = await read('../supabase/config.toml')
-  const migration = await read('../supabase/migrations/016_global_geocoding_rate_limit.sql')
+  const migration = await read('../supabase/migrations/017_global_geocoding_rate_limit.sql')
   const fn = await read('../supabase/functions/geocode/index.ts')
 
   assert.match(client, /\/functions\/v1\/geocode/)
