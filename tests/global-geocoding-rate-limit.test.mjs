@@ -21,6 +21,7 @@ test('le géocodage passe par un proxy authentifié avec une limite globale', as
   assert.doesNotMatch(migration, /grant .*geocoding_rate_limit.*authenticated/i)
   assert.match(fn, /reserve_geocoding_slot/)
   assert.match(fn, /MIN_INTERVAL_MS = 1100/)
-  assert.match(fn, /User-Agent[\s\S]*Sahaba-App/i)
+  assert.match(fn, /Sahaba-App/i)
+  assert.match(fn, /['"]User-Agent['"]/) 
   assert.match(fn, /auth\.getUser\(\)/)
 })
