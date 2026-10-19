@@ -1,3 +1,22 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+
+const read = path => readFile(new URL(path, import.meta.url), 'utf8')
+
+test('les en-têtes de sécurité sont configurés pour Netlify', async () => {
+  const config = await read('../netlify.toml')
+  for (const header of ['Content-Security-Policy', 'Strict-Transport-Security', 'X-Content-Type-Options', 'Referrer-Policy', 'Permissions-Policy']) assert.ok(config.includes(header), `en-tête manquant: ${header}`)
+})
+
+test('les rôles de modération ont un lien direct vers la modification des fiches', async () => {
+  const admin = await read('../src/pages/Admin.tsx')
+  const edit = await read('../src/pages/EditLocation.tsx')
+  assert.match(admin, /location\/\$\{place\.slug\}\/edit/)
+  assert.match(edit, /profile\?\.role!==\x27admin\x27&&profile\?\.role!==\x27moderator\x27/)
+  assert.match(edit, /openingHours/)
+  assert.match(edit, /existingPhotos/)
+})
 
 test('la soumission ne demande pas les coordonnées manuellement', async () => {
   const submit = await read('../src/pages/SubmitLocation.tsx')
