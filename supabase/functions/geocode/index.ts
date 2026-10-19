@@ -1,6 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const NominatimResult = { lat: '', lon: '' }
 const MIN_INTERVAL_MS = 1100
 const APP_USER_AGENT = 'Sahaba-App/0.1 (+https://sahaba-app.netlify.app)'
 
